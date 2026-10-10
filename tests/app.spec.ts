@@ -185,6 +185,33 @@ test('新话题面板：预览、校验、失败草稿、成功跳转', async ({
   const fields = new URLSearchParams(state.writes[1].body); expect(fields.get('syntax')).toBe('markdown'); expect(fields.get('node_name')).toBe('create'); expect(fields.get('once')).toBe('54321');
 });
 
+test('V2EX_TAB Cookie 提供默认分类，URL 参数和原站标记优先', async ({ page }) => {
+  await setup(page);
+  await page.context().addCookies([{ name: 'V2EX_TAB', value: '2|1:0|10:1791614344|8:V2EX_TAB|12:Y3JlYXRpdmU=|83dc886f5e9a98f17259572e1de460c8a185645767a647778bb3f388d2b20d0b', url: origin }]);
+  await page.goto(origin);
+  await expect(root(page).locator('.context-title')).toHaveText('创意');
+  await root(page).getByRole('button', { name: '分类和节点', exact: true }).click();
+  await expect(root(page).locator('.drawer-item[aria-current="true"]')).toHaveText('创意');
+  await page.goto(`${origin}/?tab=tech`);
+  await expect(root(page).locator('.context-title')).toHaveText('技术');
+  await page.route(`${origin}/`, route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: listHTML().replace('href="/?tab=all"', 'href="/?tab=all" class="tab_current"') }));
+  await page.goto(origin);
+  await expect(root(page).locator('.context-title')).toHaveText('全部');
+  await page.context().addCookies([{ name: 'V2EX_TAB', value: 'invalid-cookie', url: origin }]);
+  await page.unroute(`${origin}/`);
+  await page.goto(origin);
+  await expect(root(page).locator('.context-title')).toHaveText('全部');
+});
+
+test('首页无 tab 参数时按原站默认分类显示选中标记', async ({ page }) => {
+  await setup(page);
+  await page.route(`${origin}/`, route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: listHTML().replace('href="/?tab=tech"', 'href="/?tab=tech" class="tab_current"') }));
+  await page.goto(origin);
+  await expect(root(page).locator('.context-title')).toHaveText('技术');
+  await root(page).getByRole('button', { name: '分类和节点', exact: true }).click();
+  await expect(root(page).locator('.drawer-item[aria-current="true"]')).toHaveText('技术');
+});
+
 test('分类和节点标记当前选择，分页和打开话题后保留标记', async ({ page }) => {
   await setup(page); await page.goto(origin);
   const toggle = root(page).getByRole('button', { name: '分类和节点', exact: true });

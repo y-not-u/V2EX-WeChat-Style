@@ -3616,6 +3616,21 @@ svg { display: block; width: 24px; height: 24px; }
     const exact = el2?.getAttribute("title")?.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})(?:\s+[+-]\d{2}:\d{2})?$/);
     return exact ? `${exact[1]} ${exact[2]}` : text2(el2);
   };
+  var savedTab = () => {
+    try {
+      const cookie = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("V2EX_TAB="));
+      if (!cookie) return;
+      const value = decodeURIComponent(cookie.slice("V2EX_TAB=".length)).replace(/^"|"$/g, "");
+      const fields = value.split("|");
+      if (fields[0] !== "2" || fields[3] !== "8:V2EX_TAB") return;
+      const payload = fields[4]?.match(/^(\d+):([A-Za-z0-9+/=]+)$/);
+      if (!payload || Number(payload[1]) !== payload[2].length) return;
+      const tab = atob(payload[2]);
+      return /^[a-z0-9_]+$/.test(tab) ? tab : void 0;
+    } catch {
+      return;
+    }
+  };
   var absolute = (value, base) => new URL(value, base).href;
   var links = (elements, base) => Array.from(elements).flatMap((el2) => {
     const href = el2.getAttribute("href");
@@ -3709,11 +3724,15 @@ svg { display: block; width: 24px; height: 24px; }
       }];
     });
     const title = nodeTitle || text2(doc.querySelector('#Main .header h1, #Main .header a[href^="/go/"]')) || "V2EX";
+    const activeTab = doc.querySelector("#Tabs a.tab_current")?.getAttribute("href");
+    const listURL = new URL(base);
+    const fallbackTab = listURL.searchParams.get("tab") || (listURL.pathname === "/" ? savedTab() : void 0);
     return {
       url: base,
       title,
       items,
       tabs: links(doc.querySelectorAll('#Tabs a[href^="/?tab="]'), base),
+      currentTab: activeTab ? absolute(activeTab, base) : fallbackTab ? absolute(`/?tab=${fallbackTab}`, base) : void 0,
       nodes: links(doc.querySelectorAll('#SecondaryTabs a[href^="/go/"]'), base),
       pagination: pagination(doc, base),
       session: session(doc, base)
@@ -4512,7 +4531,8 @@ svg { display: block; width: 24px; height: 24px; }
     isCurrentList(input) {
       const target = new URL(input, location.origin);
       const current = new URL(this.listURL, location.origin);
-      return target.pathname.replace(/\/$/, "") === current.pathname.replace(/\/$/, "") && (target.pathname !== "/" || (target.searchParams.get("tab") || "all") === (current.searchParams.get("tab") || "all"));
+      const currentTab = this.list?.currentTab ? new URL(this.list.currentTab, location.origin).searchParams.get("tab") : current.searchParams.get("tab");
+      return target.pathname.replace(/\/$/, "") === current.pathname.replace(/\/$/, "") && (target.pathname !== "/" || (target.searchParams.get("tab") || "all") === (currentTab || "all"));
     }
     async openNodes() {
       if (this.drawer) {

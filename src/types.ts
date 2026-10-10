@@ -7,6 +7,7 @@ export interface TopicItem {
 export interface Pagination { current: number; total: number; links: Link[] }
 export interface TopicList {
   url: string; title: string; items: TopicItem[]; tabs: Link[]; nodes: Link[];
+  currentTab?: string;
   pagination: Pagination; session: Session;
 }
 export interface NativeForm {

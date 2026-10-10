@@ -7,6 +7,19 @@ const timestamp = (el: Element | null): string => {
   const exact = el?.getAttribute('title')?.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})(?:\s+[+-]\d{2}:\d{2})?$/);
   return exact ? `${exact[1]} ${exact[2]}` : text(el);
 };
+const savedTab = (): string | undefined => {
+  try {
+    const cookie = document.cookie.split(';').map(part => part.trim()).find(part => part.startsWith('V2EX_TAB='));
+    if (!cookie) return;
+    const value = decodeURIComponent(cookie.slice('V2EX_TAB='.length)).replace(/^"|"$/g, '');
+    const fields = value.split('|');
+    if (fields[0] !== '2' || fields[3] !== '8:V2EX_TAB') return;
+    const payload = fields[4]?.match(/^(\d+):([A-Za-z0-9+/=]+)$/);
+    if (!payload || Number(payload[1]) !== payload[2].length) return;
+    const tab = atob(payload[2]);
+    return /^[a-z0-9_]+$/.test(tab) ? tab : undefined;
+  } catch { return; }
+};
 const absolute = (value: string, base: string): string => new URL(value, base).href;
 const links = (elements: Iterable<Element>, base: string): Link[] => Array.from(elements).flatMap(el => {
   const href = el.getAttribute('href');
@@ -91,7 +104,11 @@ export function parseList(doc: Document, base: string): TopicList {
     }];
   });
   const title = nodeTitle || text(doc.querySelector('#Main .header h1, #Main .header a[href^="/go/"]')) || 'V2EX';
+  const activeTab = doc.querySelector('#Tabs a.tab_current')?.getAttribute('href');
+  const listURL = new URL(base);
+  const fallbackTab = listURL.searchParams.get('tab') || (listURL.pathname === '/' ? savedTab() : undefined);
   return { url: base, title, items, tabs: links(doc.querySelectorAll('#Tabs a[href^="/?tab="]'), base),
+    currentTab: activeTab ? absolute(activeTab, base) : fallbackTab ? absolute(`/?tab=${fallbackTab}`, base) : undefined,
     nodes: links(doc.querySelectorAll('#SecondaryTabs a[href^="/go/"]'), base),
     pagination: pagination(doc, base), session: session(doc, base) };
 }

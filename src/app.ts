@@ -368,8 +368,9 @@ export class ChatApp {
 
   private isCurrentList(input: string): boolean {
     const target = new URL(input, location.origin); const current = new URL(this.listURL, location.origin);
+    const currentTab = this.list?.currentTab ? new URL(this.list.currentTab, location.origin).searchParams.get('tab') : current.searchParams.get('tab');
     return target.pathname.replace(/\/$/, '') === current.pathname.replace(/\/$/, '') &&
-      (target.pathname !== '/' || (target.searchParams.get('tab') || 'all') === (current.searchParams.get('tab') || 'all'));
+      (target.pathname !== '/' || (target.searchParams.get('tab') || 'all') === (currentTab || 'all'));
   }
 
   private async openNodes(): Promise<void> {

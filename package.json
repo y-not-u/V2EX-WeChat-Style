@@ -1,6 +1,6 @@
 {
   "name": "v2ex-wechat-style",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "用微信三栏布局浏览 V2EX，支持回复、发帖、收藏和感谢",
   "author": "y-not-u",

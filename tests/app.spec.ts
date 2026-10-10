@@ -435,9 +435,44 @@ test('快速切换取消旧请求，列表不会丢失', async ({ page }) => {
   await expect(chatTitle(page)).toHaveText(titles[2]); await expect(root(page).locator('.topic-row')).toHaveCount(6);
 });
 
+test('微信输入面板：仅表情工具、光标插入、草稿恢复与发送', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  const state = await setup(page); await page.goto(`${origin}/t/1`);
+  await expect(page).toHaveTitle('V2EX');
+  const composer = root(page).locator('.composer');
+  const input = composer.getByRole('textbox', { name: '回复内容' });
+  const emoji = composer.getByRole('button', { name: '表情', exact: true });
+  const send = composer.getByRole('button', { name: '发送', exact: true });
+  await expect(composer.locator('.compose-toolbar button')).toHaveCount(1);
+  await expect(send).toBeDisabled();
+  const toolbarBox = await composer.locator('.compose-toolbar').boundingBox();
+  const inputBox = await input.boundingBox(); const sendBox = await send.boundingBox(); const composerBox = await composer.boundingBox();
+  expect(toolbarBox!.y + toolbarBox!.height).toBeLessThanOrEqual(inputBox!.y);
+  expect(inputBox!.y + inputBox!.height).toBeLessThanOrEqual(sendBox!.y);
+  expect(composerBox!.x + composerBox!.width - sendBox!.x - sendBox!.width).toBe(24);
+  await page.screenshot({ path: '/tmp/v2ex-composer-desktop.png' });
+  await input.fill('前后'); await input.evaluate(node => (node as HTMLTextAreaElement).setSelectionRange(1, 1));
+  await emoji.click(); const picker = composer.getByRole('dialog', { name: '选择表情' });
+  await expect(picker).toBeVisible();
+  await picker.getByRole('button', { name: '😀', exact: true }).click();
+  await expect(input).toHaveValue('前😀后'); await expect(input).toBeFocused();
+  await expect(picker).toHaveCount(0); await expect(send).toBeEnabled();
+  await page.reload(); await expect(input).toHaveValue('前😀后');
+  await emoji.click(); await picker.getByRole('button').first().press('Escape');
+  await expect(picker).toHaveCount(0); await expect(emoji).toHaveAttribute('aria-expanded', 'false');
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await emoji.click(); await expect(picker).toBeVisible();
+  await page.screenshot({ path: '/tmp/v2ex-composer-compact.png' });
+  await input.click(); await expect(picker).toHaveCount(0);
+  await send.click(); await expect(root(page).getByText('回复已发送')).toBeVisible();
+  expect(state.submitted).toBe('前😀后'); await expect(input).toHaveValue('');
+  expect(errors).toEqual([]);
+});
+
 test('未登录可读不可写，发帖和收藏引导原站登录', async ({ page }) => {
   const state = await setup(page, { loggedIn: false }); await page.goto(`${origin}/t/1`);
   await expect(root(page).getByRole('textbox', { name: '回复内容' })).toBeDisabled();
+  await expect(root(page).getByRole('button', { name: '表情', exact: true })).toBeDisabled();
   await expect(root(page).locator('.composer').getByRole('link', { name: '登录 V2EX' })).toBeVisible();
   await root(page).getByRole('button', { name: '发表新话题' }).click(); await expect(root(page).getByRole('dialog')).toContainText('请先登录');
   expect(state.writes).toHaveLength(0);
@@ -504,9 +539,10 @@ test('详情宽度可拖动、键盘调整、记忆并恢复默认，窗口缩�
   await drag(2000);
   expect(await width()).toBe(420);
   await page.setViewportSize({ width: 1024, height: 900 });
-  expect(await width()).toBe(420);
+  await expect.poll(width).toBe(420);
   expect((await chat.boundingBox())!.x + await width()).toBe(1024);
   await page.setViewportSize({ width: 1440, height: 900 });
+  await expect.poll(width).toBe(420);
   await drag(-2000);
   expect((await list.boundingBox())!.width).toBe(240);
   await splitter.dblclick();

@@ -111,13 +111,19 @@ svg { display: block; width: 24px; height: 24px; }
 .bubble-body blockquote { border-left: 3px solid #ddd; margin: 8px 0; padding-left: 12px; color: #777; }
 .supplement-label { font-size: 12px; color: #999; margin-bottom: 9px; }
 .thread-note { text-align: center; margin: 18px auto; font-size: 12px; color: #999; }
-.composer { background: var(--header); border-top: 1px solid var(--line); padding: 14px 16px; flex-shrink: 0; }
-.compose-row { display: flex; gap: 14px; align-items: flex-end; }
-.reply-input { resize: none; min-height: 52px; max-height: 180px; flex: 1; border: none; outline-offset: 0; border-radius: 6px; padding: 13px 15px; background: #fff; line-height: 1.5; }
+.composer { position: relative; background: #f3f3f3; border-top: 1px solid var(--line); padding: 14px 24px 20px; flex-shrink: 0; }
+.compose-toolbar { display: flex; align-items: center; height: 36px; margin-bottom: 8px; }
+.emoji-toggle { width: 36px; height: 36px; color: #444; }
+.emoji-toggle svg { width: 28px; height: 28px; }
+.reply-input { display: block; width: 100%; resize: none; min-height: 104px; max-height: 180px; border: none; outline-offset: 0; border-radius: 0; padding: 4px 2px; background: transparent; line-height: 1.5; }
 .reply-input::placeholder { color: #999; }
-.send { background: var(--accent); color: #fff; border-radius: 5px; padding: 11px 19px; min-height: 48px; white-space: nowrap; }
-.send:hover:not(:disabled) { background: #06ad56; }
-.send:disabled { background: #ace0b8; opacity: 1; }
+.compose-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+.send { background: #e9e9e9; color: #07a64b; border-radius: 5px; padding: 8px 24px; min-width: 140px; min-height: 40px; white-space: nowrap; }
+.send:hover:not(:disabled) { background: #dedede; }
+.send:disabled { background: #e9e9e9; color: #b4b4b4; opacity: 1; }
+.emoji-picker { position: absolute; bottom: calc(100% - 12px); left: 24px; z-index: 12; display: grid; grid-template-columns: repeat(8, 1fr); width: min(344px, calc(100% - 48px)); padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #fff; box-shadow: 0 3px 20px #0002; }
+.emoji-option { display: grid; place-items: center; min-width: 0; height: 38px; font-size: 24px; border-radius: 4px; }
+.emoji-option:hover { background: #f1f1f1; }
 .compose-note { font-size: 12px; color: #999; padding: 8px 0 0; display: flex; justify-content: space-between; gap: 14px; }
 .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; min-height: 120px; padding: 36px; color: #999; gap: 14px; }
 .empty svg { width: 56px; height: 56px; color: #c1c1c1; stroke-width: 1; }

@@ -353,26 +353,47 @@ export class ChatApp {
   }
 
   private renderComposer(topic: Topic): HTMLElement {
-    const composer = el('footer', 'composer'); const row = el('div', 'compose-row');
-    this.reply = el('textarea', 'reply-input'); this.reply.rows = 1; this.reply.placeholder = '发一条回复'; this.reply.setAttribute('aria-label', '回复内容');
+    const composer = el('footer', 'composer'); const toolbar = el('div', 'compose-toolbar'); const actions = el('div', 'compose-actions');
+    this.reply = el('textarea', 'reply-input'); this.reply.rows = 4; this.reply.setAttribute('aria-label', '回复内容');
     const available = Boolean(topic.replyForm); this.reply.disabled = !available || this.pending.has(`reply:${topic.id}`);
     this.reply.value = read(draftKey(this.user.user, topic.id), '');
     const send = button('发送', () => void this.sendReply(), 'send'); send.dataset.send = 'true'; send.disabled = this.reply.disabled || !this.reply.value.trim();
+    const emoji = button('表情', () => {
+      const wasOpen = this.popup?.classList.contains('emoji-picker');
+      this.closePopup();
+      if (wasOpen || !this.reply || this.reply.disabled) return;
+      const picker = this.popup = el('div', 'emoji-picker');
+      picker.setAttribute('role', 'dialog'); picker.setAttribute('aria-label', '选择表情');
+      for (const face of ['😀', '😄', '😁', '😆', '😂', '🤣', '😊', '😉', '😍', '🥰', '😘', '😎', '🤔', '😅', '🥲', '😭', '😮', '😳', '🙃', '😴', '😤', '🙏', '👍', '👎', '👏', '🎉', '❤️', '💔', '🔥', '☕', '🍻', '👀']) {
+        picker.append(button(face, () => {
+          if (!this.reply || this.reply.disabled) return;
+          this.reply.setRangeText(face, this.reply.selectionStart, this.reply.selectionEnd, 'end');
+          this.reply.dispatchEvent(new Event('input')); this.closePopup(); this.reply.focus();
+        }, 'emoji-option'));
+      }
+      composer.append(picker); emoji.setAttribute('aria-expanded', 'true');
+      picker.querySelector<HTMLButtonElement>('button')?.focus();
+    }, 'icon-button emoji-toggle', 'smile');
+    emoji.dataset.menu = 'true'; emoji.disabled = this.reply.disabled;
+    emoji.setAttribute('aria-haspopup', 'dialog'); emoji.setAttribute('aria-expanded', 'false');
     this.reply.addEventListener('input', () => { this.saveDraft(); send.disabled = this.navigating || this.pending.has(`reply:${topic.id}`) || !this.reply!.value.trim(); this.resizeReply(); });
     this.reply.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.isComposing) { event.preventDefault(); void this.sendReply(); } });
-    row.append(this.reply, send); composer.append(row);
+    toolbar.append(emoji); actions.append(send); composer.append(toolbar, this.reply, actions);
     if (!available) {
       const note = el('div', 'compose-note', this.user.user ? topic.replyNotice || '此话题暂时无法回复' : '登录后即可回复');
       note.append(nativeLink(this.user.user ? '查看原页面' : '登录 V2EX', this.user.user ? topic.url : `/signin?next=${encodeURIComponent(new URL(topic.url).pathname)}`)); composer.append(note);
     }
     requestAnimationFrame(() => this.resizeReply()); return composer;
   }
-  private resizeReply(): void { if (this.reply) { this.reply.style.height = 'auto'; this.reply.style.height = `${Math.min(180, Math.max(52, this.reply.scrollHeight))}px`; } }
+  private resizeReply(): void { if (this.reply) { this.reply.style.height = 'auto'; this.reply.style.height = `${Math.min(180, Math.max(104, this.reply.scrollHeight))}px`; } }
   private saveDraft(): void { if (this.topic && this.reply) write(draftKey(this.user.user, this.topic.id), this.reply.value); }
   private setComposerBusy(busy: boolean): void {
     const send = this.chat.querySelector<HTMLButtonElement>('[data-send]');
     if (send) send.disabled = busy || !this.topic?.replyForm || !this.reply?.value.trim() || this.pending.has(`reply:${this.topic?.id}`);
     if (this.reply) this.reply.disabled = busy || !this.topic?.replyForm || this.pending.has(`reply:${this.topic?.id}`);
+    const emoji = this.chat.querySelector<HTMLButtonElement>('.emoji-toggle');
+    if (emoji) emoji.disabled = Boolean(this.reply?.disabled);
+    if (busy && this.popup?.classList.contains('emoji-picker')) this.closePopup();
   }
   private mention(user: string): void {
     if (!this.reply || this.reply.disabled) { this.toast('当前话题无法回复，请先登录或查看原页面', this.topic?.url, true); return; }
@@ -441,7 +462,10 @@ export class ChatApp {
     popup.append(button('刷新话题', () => void this.navigate(topic.url, 'replace')), nativeLink('查看原页面', topic.url));
     this.chat.append(popup); popup.querySelector<HTMLButtonElement>('button')?.focus();
   }
-  private closePopup(): void { this.popup?.remove(); this.popup = undefined; }
+  private closePopup(): void {
+    this.popup?.remove(); this.popup = undefined;
+    this.chat.querySelector('.emoji-toggle')?.setAttribute('aria-expanded', 'false');
+  }
   private closeDrawer(): void { this.drawer?.remove(); this.drawer = undefined; this.updateRailSelection(); }
 
   private isCurrentList(input: string): boolean {

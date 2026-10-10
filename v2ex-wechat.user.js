@@ -1340,13 +1340,19 @@ svg { display: block; width: 24px; height: 24px; }
 .bubble-body blockquote { border-left: 3px solid #ddd; margin: 8px 0; padding-left: 12px; color: #777; }
 .supplement-label { font-size: 12px; color: #999; margin-bottom: 9px; }
 .thread-note { text-align: center; margin: 18px auto; font-size: 12px; color: #999; }
-.composer { background: var(--header); border-top: 1px solid var(--line); padding: 14px 16px; flex-shrink: 0; }
-.compose-row { display: flex; gap: 14px; align-items: flex-end; }
-.reply-input { resize: none; min-height: 52px; max-height: 180px; flex: 1; border: none; outline-offset: 0; border-radius: 6px; padding: 13px 15px; background: #fff; line-height: 1.5; }
+.composer { position: relative; background: #f3f3f3; border-top: 1px solid var(--line); padding: 14px 24px 20px; flex-shrink: 0; }
+.compose-toolbar { display: flex; align-items: center; height: 36px; margin-bottom: 8px; }
+.emoji-toggle { width: 36px; height: 36px; color: #444; }
+.emoji-toggle svg { width: 28px; height: 28px; }
+.reply-input { display: block; width: 100%; resize: none; min-height: 104px; max-height: 180px; border: none; outline-offset: 0; border-radius: 0; padding: 4px 2px; background: transparent; line-height: 1.5; }
 .reply-input::placeholder { color: #999; }
-.send { background: var(--accent); color: #fff; border-radius: 5px; padding: 11px 19px; min-height: 48px; white-space: nowrap; }
-.send:hover:not(:disabled) { background: #06ad56; }
-.send:disabled { background: #ace0b8; opacity: 1; }
+.compose-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+.send { background: #e9e9e9; color: #07a64b; border-radius: 5px; padding: 8px 24px; min-width: 140px; min-height: 40px; white-space: nowrap; }
+.send:hover:not(:disabled) { background: #dedede; }
+.send:disabled { background: #e9e9e9; color: #b4b4b4; opacity: 1; }
+.emoji-picker { position: absolute; bottom: calc(100% - 12px); left: 24px; z-index: 12; display: grid; grid-template-columns: repeat(8, 1fr); width: min(344px, calc(100% - 48px)); padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #fff; box-shadow: 0 3px 20px #0002; }
+.emoji-option { display: grid; place-items: center; min-width: 0; height: 38px; font-size: 24px; border-radius: 4px; }
+.emoji-option:hover { background: #f1f1f1; }
 .compose-note { font-size: 12px; color: #999; padding: 8px 0 0; display: flex; justify-content: space-between; gap: 14px; }
 .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; min-height: 120px; padding: 36px; color: #999; gap: 14px; }
 .empty svg { width: 56px; height: 56px; color: #c1c1c1; stroke-width: 1; }
@@ -3756,6 +3762,7 @@ svg { display: block; width: 24px; height: 24px; }
 
   // src/icons.ts
   var paths = {
+    smile: '<circle cx="12" cy="12" r="9"/><path d="M8 14a4 4 0 0 0 8 0Z"/><path d="M8 9h.01M16 9h.01" stroke-width="3"/>',
     chat: '<path d="M20 11.5a8 8 0 0 1-8 8 9 9 0 0 1-3-.5L4 21l1.4-4.6A8 8 0 1 1 20 11.5Z"/>',
     bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
     compass: '<circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/>',
@@ -4279,10 +4286,10 @@ svg { display: block; width: 24px; height: 24px; }
     }
     renderComposer(topic) {
       const composer = el("footer", "composer");
-      const row = el("div", "compose-row");
+      const toolbar = el("div", "compose-toolbar");
+      const actions = el("div", "compose-actions");
       this.reply = el("textarea", "reply-input");
-      this.reply.rows = 1;
-      this.reply.placeholder = "发一条回复";
+      this.reply.rows = 4;
       this.reply.setAttribute("aria-label", "回复内容");
       const available = Boolean(topic.replyForm);
       this.reply.disabled = !available || this.pending.has(`reply:${topic.id}`);
@@ -4290,6 +4297,30 @@ svg { display: block; width: 24px; height: 24px; }
       const send = button("发送", () => void this.sendReply(), "send");
       send.dataset.send = "true";
       send.disabled = this.reply.disabled || !this.reply.value.trim();
+      const emoji = button("表情", () => {
+        const wasOpen = this.popup?.classList.contains("emoji-picker");
+        this.closePopup();
+        if (wasOpen || !this.reply || this.reply.disabled) return;
+        const picker = this.popup = el("div", "emoji-picker");
+        picker.setAttribute("role", "dialog");
+        picker.setAttribute("aria-label", "选择表情");
+        for (const face of ["😀", "😄", "😁", "😆", "😂", "🤣", "😊", "😉", "😍", "🥰", "😘", "😎", "🤔", "😅", "🥲", "😭", "😮", "😳", "🙃", "😴", "😤", "🙏", "👍", "👎", "👏", "🎉", "❤️", "💔", "🔥", "☕", "🍻", "👀"]) {
+          picker.append(button(face, () => {
+            if (!this.reply || this.reply.disabled) return;
+            this.reply.setRangeText(face, this.reply.selectionStart, this.reply.selectionEnd, "end");
+            this.reply.dispatchEvent(new Event("input"));
+            this.closePopup();
+            this.reply.focus();
+          }, "emoji-option"));
+        }
+        composer.append(picker);
+        emoji.setAttribute("aria-expanded", "true");
+        picker.querySelector("button")?.focus();
+      }, "icon-button emoji-toggle", "smile");
+      emoji.dataset.menu = "true";
+      emoji.disabled = this.reply.disabled;
+      emoji.setAttribute("aria-haspopup", "dialog");
+      emoji.setAttribute("aria-expanded", "false");
       this.reply.addEventListener("input", () => {
         this.saveDraft();
         send.disabled = this.navigating || this.pending.has(`reply:${topic.id}`) || !this.reply.value.trim();
@@ -4301,8 +4332,9 @@ svg { display: block; width: 24px; height: 24px; }
           void this.sendReply();
         }
       });
-      row.append(this.reply, send);
-      composer.append(row);
+      toolbar.append(emoji);
+      actions.append(send);
+      composer.append(toolbar, this.reply, actions);
       if (!available) {
         const note = el("div", "compose-note", this.user.user ? topic.replyNotice || "此话题暂时无法回复" : "登录后即可回复");
         note.append(nativeLink(this.user.user ? "查看原页面" : "登录 V2EX", this.user.user ? topic.url : `/signin?next=${encodeURIComponent(new URL(topic.url).pathname)}`));
@@ -4314,7 +4346,7 @@ svg { display: block; width: 24px; height: 24px; }
     resizeReply() {
       if (this.reply) {
         this.reply.style.height = "auto";
-        this.reply.style.height = `${Math.min(180, Math.max(52, this.reply.scrollHeight))}px`;
+        this.reply.style.height = `${Math.min(180, Math.max(104, this.reply.scrollHeight))}px`;
       }
     }
     saveDraft() {
@@ -4324,6 +4356,9 @@ svg { display: block; width: 24px; height: 24px; }
       const send = this.chat.querySelector("[data-send]");
       if (send) send.disabled = busy || !this.topic?.replyForm || !this.reply?.value.trim() || this.pending.has(`reply:${this.topic?.id}`);
       if (this.reply) this.reply.disabled = busy || !this.topic?.replyForm || this.pending.has(`reply:${this.topic?.id}`);
+      const emoji = this.chat.querySelector(".emoji-toggle");
+      if (emoji) emoji.disabled = Boolean(this.reply?.disabled);
+      if (busy && this.popup?.classList.contains("emoji-picker")) this.closePopup();
     }
     mention(user) {
       if (!this.reply || this.reply.disabled) {
@@ -4435,6 +4470,7 @@ svg { display: block; width: 24px; height: 24px; }
     closePopup() {
       this.popup?.remove();
       this.popup = void 0;
+      this.chat.querySelector(".emoji-toggle")?.setAttribute("aria-expanded", "false");
     }
     closeDrawer() {
       this.drawer?.remove();

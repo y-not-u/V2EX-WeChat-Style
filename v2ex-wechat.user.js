@@ -4650,9 +4650,9 @@ svg { display: block; width: 24px; height: 24px; }
       node.setAttribute("aria-live", "polite");
       node.append(el("span", "toast-message", message));
       if (url) node.append(nativeLink("查看原页面", url));
-      node.append(button("关闭提示", () => node.remove(), "icon-button", "close"));
+      if (persistent) node.append(button("关闭提示", () => node.remove(), "icon-button", "close"));
       this.chat.append(node);
-      if (!persistent) this.toastTimer = setTimeout(() => node.remove(), 4500);
+      if (!persistent) this.toastTimer = setTimeout(() => node.remove(), 3e3);
     }
   };
 

@@ -611,7 +611,7 @@ export class ChatApp {
     const node = this.toastNode = el('div', 'toast'); node.setAttribute('role', 'status'); node.setAttribute('aria-live', 'polite');
     node.append(el('span', 'toast-message', message));
     if (url) node.append(nativeLink('查看原页面', url));
-    node.append(button('关闭提示', () => node.remove(), 'icon-button', 'close'));
-    this.chat.append(node); if (!persistent) this.toastTimer = setTimeout(() => node.remove(), 4500);
+    if (persistent) node.append(button('关闭提示', () => node.remove(), 'icon-button', 'close'));
+    this.chat.append(node); if (!persistent) this.toastTimer = setTimeout(() => node.remove(), 3000);
   }
 }

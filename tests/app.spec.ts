@@ -168,14 +168,8 @@ test('重复发送被阻止', async ({ page }) => {
   await input.press('Control+Enter'); await page.keyboard.press('Control+Enter');
   await expect(root(page).getByText('回复已发送')).toBeVisible(); expect(state.writes).toHaveLength(1);
   const toast = root(page).getByRole('status');
-  const messageBox = await toast.locator('.toast-message').boundingBox();
-  const close = toast.getByRole('button', { name: '关闭提示' });
-  const closeBox = await close.boundingBox();
-  expect(messageBox).not.toBeNull(); expect(closeBox).not.toBeNull();
-  expect(closeBox!.x).toBeGreaterThanOrEqual(messageBox!.x + messageBox!.width);
-  expect(Math.abs(closeBox!.y + closeBox!.height / 2 - messageBox!.y - messageBox!.height / 2)).toBeLessThan(2);
-  await page.screenshot({ path: '/tmp/v2ex-toast-fixed.png' });
-  await close.click(); await expect(toast).toHaveCount(0);
+  await expect(toast.getByRole('button', { name: '关闭提示' })).toHaveCount(0);
+  await expect(toast).toHaveCount(0, { timeout: 6000 });
 });
 
 test('收藏、取消收藏、感谢确认与令牌刷新', async ({ page }) => {

@@ -175,7 +175,7 @@ export class ChatApp {
     const brand = button('V2EX 首页', () => { this.closeDrawer(); void this.navigate('/?tab=all'); }, 'brand');
     const logo = el('img'); logo.src = `${location.origin}/static/icon-192.png`; logo.alt = 'V2EX'; brand.replaceChildren(logo);
     this.rail.append(brand,
-      button('话题', () => { this.closeDrawer(); void this.navigate(this.listURL); }, 'rail-button active', 'chat'),
+      button('话题', () => { this.closeDrawer(); void this.navigate(new URL(this.listURL, location.origin).pathname === '/my/topics' ? '/?tab=all' : this.listURL); }, 'rail-button', 'chat'),
       this.railLink('通知', '/notifications', 'bell'),
       button('分类和节点', () => void this.openNodes(), 'rail-button', 'compass'),
       button('我的收藏', () => { this.closeDrawer(); void this.navigate('/my/topics'); }, 'rail-button', 'star'),
@@ -184,6 +184,16 @@ export class ChatApp {
     const profile = this.railLink(this.user.user ? `个人资料：${this.user.user}` : '登录 V2EX', this.user.user ? `/member/${this.user.user}` : '/signin', 'user');
     profile.classList.add('rail-profile'); profile.replaceChildren(avatar(this.user.avatar, this.user.user || 'V'));
     this.rail.append(profile);
+    this.updateRailSelection();
+  }
+  private updateRailSelection(): void {
+    const selected = this.drawer ? '分类和节点' : new URL(this.listURL, location.origin).pathname === '/my/topics' ? '我的收藏' : '话题';
+    for (const control of this.rail.querySelectorAll<HTMLElement>('.rail-button')) {
+      const active = control.getAttribute('aria-label') === selected;
+      control.classList.toggle('active', active);
+      if (active) control.setAttribute('aria-current', 'true');
+      else control.removeAttribute('aria-current');
+    }
   }
   private railLink(label: string, url: string, symbol: string): HTMLAnchorElement {
     const link = nativeLink('', url, 'rail-button'); link.title = label; link.setAttribute('aria-label', label); link.innerHTML = icon(symbol); return link;
@@ -192,6 +202,7 @@ export class ChatApp {
   private applyList(list: TopicList): void {
     this.list = list; this.listURL = list.url;
     if (list.session.user !== this.user.user) { this.user = list.session; this.renderRail(); }
+    this.updateRailSelection();
     write(`context:${this.user.user || 'guest'}`, this.listURL);
     this.context.textContent = (list.tabs.length ? list.tabs : homeTabs).find(t => this.isCurrentList(t.url))?.label || (list.url.includes('/my/topics') ? '我的收藏' : list.title === 'V2EX' ? '话题' : list.title);
     this.listPanel.querySelector('h1')!.title = this.context.textContent;
@@ -431,7 +442,7 @@ export class ChatApp {
     this.chat.append(popup); popup.querySelector<HTMLButtonElement>('button')?.focus();
   }
   private closePopup(): void { this.popup?.remove(); this.popup = undefined; }
-  private closeDrawer(): void { this.drawer?.remove(); this.drawer = undefined; }
+  private closeDrawer(): void { this.drawer?.remove(); this.drawer = undefined; this.updateRailSelection(); }
 
   private isCurrentList(input: string): boolean {
     const target = new URL(input, location.origin); const current = new URL(this.listURL, location.origin);
@@ -443,6 +454,7 @@ export class ChatApp {
   private async openNodes(): Promise<void> {
     if (this.drawer) { this.closeDrawer(); return; }
     const drawer = this.drawer = el('aside', 'drawer'); drawer.setAttribute('aria-label', '分类和节点');
+    this.updateRailSelection();
     const head = el('header', 'drawer-head'); head.append(el('h2', '', '分类和节点'), button('关闭分类', () => this.closeDrawer(), 'icon-button', 'close'));
     const body = el('div', 'drawer-body');
     const item = (label: string, url: string) => {

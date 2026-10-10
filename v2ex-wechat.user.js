@@ -3944,8 +3944,8 @@ svg { display: block; width: 24px; height: 24px; }
         brand,
         button("话题", () => {
           this.closeDrawer();
-          void this.navigate(this.listURL);
-        }, "rail-button active", "chat"),
+          void this.navigate(new URL(this.listURL, location.origin).pathname === "/my/topics" ? "/?tab=all" : this.listURL);
+        }, "rail-button", "chat"),
         this.railLink("通知", "/notifications", "bell"),
         button("分类和节点", () => void this.openNodes(), "rail-button", "compass"),
         button("我的收藏", () => {
@@ -3960,6 +3960,16 @@ svg { display: block; width: 24px; height: 24px; }
       profile.classList.add("rail-profile");
       profile.replaceChildren(avatar(this.user.avatar, this.user.user || "V"));
       this.rail.append(profile);
+      this.updateRailSelection();
+    }
+    updateRailSelection() {
+      const selected = this.drawer ? "分类和节点" : new URL(this.listURL, location.origin).pathname === "/my/topics" ? "我的收藏" : "话题";
+      for (const control of this.rail.querySelectorAll(".rail-button")) {
+        const active = control.getAttribute("aria-label") === selected;
+        control.classList.toggle("active", active);
+        if (active) control.setAttribute("aria-current", "true");
+        else control.removeAttribute("aria-current");
+      }
     }
     railLink(label, url, symbol) {
       const link = nativeLink("", url, "rail-button");
@@ -3975,6 +3985,7 @@ svg { display: block; width: 24px; height: 24px; }
         this.user = list.session;
         this.renderRail();
       }
+      this.updateRailSelection();
       write(`context:${this.user.user || "guest"}`, this.listURL);
       this.context.textContent = (list.tabs.length ? list.tabs : homeTabs).find((t) => this.isCurrentList(t.url))?.label || (list.url.includes("/my/topics") ? "我的收藏" : list.title === "V2EX" ? "话题" : list.title);
       this.listPanel.querySelector("h1").title = this.context.textContent;
@@ -4352,6 +4363,7 @@ svg { display: block; width: 24px; height: 24px; }
     closeDrawer() {
       this.drawer?.remove();
       this.drawer = void 0;
+      this.updateRailSelection();
     }
     isCurrentList(input) {
       const target = new URL(input, location.origin);
@@ -4366,6 +4378,7 @@ svg { display: block; width: 24px; height: 24px; }
       }
       const drawer = this.drawer = el("aside", "drawer");
       drawer.setAttribute("aria-label", "分类和节点");
+      this.updateRailSelection();
       const head = el("header", "drawer-head");
       head.append(el("h2", "", "分类和节点"), button("关闭分类", () => this.closeDrawer(), "icon-button", "close"));
       const body = el("div", "drawer-body");

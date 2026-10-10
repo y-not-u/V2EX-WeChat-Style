@@ -224,6 +224,49 @@ test('V2EX_TAB Cookie 提供默认分类，URL 参数和原站标记优先', asy
   await expect(root(page).locator('.context-title')).toHaveText('全部');
 });
 
+test('左侧导航高亮随收藏、分类面板和历史导航同步', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await setup(page); await page.goto(origin);
+  const rail = root(page).getByRole('navigation', { name: '主导航' });
+  const topics = rail.getByRole('button', { name: '话题', exact: true });
+  const favorites = rail.getByRole('button', { name: '我的收藏', exact: true });
+  const categories = rail.getByRole('button', { name: '分类和节点', exact: true });
+  const selected = rail.locator('.rail-button.active');
+  const expectSelection = async (label: string) => {
+    await expect(selected).toHaveCount(1);
+    await expect(selected).toHaveAttribute('aria-label', label);
+    await expect(selected).toHaveAttribute('aria-current', 'true');
+    await expect(selected).toHaveCSS('color', 'rgb(7, 193, 96)');
+    await expect(rail.locator('[aria-current="true"]')).toHaveCount(1);
+  };
+  await expectSelection('话题');
+  await favorites.click(); await expect(page).toHaveURL(`${origin}/my/topics`);
+  await expectSelection('我的收藏');
+  await expect(topics).not.toHaveClass(/active/);
+  await page.screenshot({ path: '/tmp/v2ex-rail-favorites.png' });
+  await categories.click(); await expect(root(page).locator('.drawer')).toBeVisible();
+  await expectSelection('分类和节点');
+  await page.screenshot({ path: '/tmp/v2ex-rail-categories.png' });
+  await categories.click(); await expect(root(page).locator('.drawer')).toHaveCount(0);
+  await expectSelection('我的收藏');
+  await categories.click(); await page.keyboard.press('Escape');
+  await expectSelection('我的收藏');
+  await openTopic(page); await expectSelection('我的收藏');
+  await page.reload(); await expectSelection('我的收藏');
+  await topics.click(); await expect(page).toHaveURL(`${origin}/?tab=all`);
+  await expectSelection('话题');
+  await page.goBack(); await expect(chatTitle(page)).toHaveText(titles[0]);
+  await expectSelection('我的收藏');
+  await page.goForward(); await expect(page).toHaveURL(`${origin}/?tab=all`);
+  await expectSelection('话题');
+  await categories.click();
+  await root(page).locator('.drawer').getByRole('button', { name: '技术', exact: true }).click();
+  await expect(page).toHaveURL(`${origin}/?tab=tech`);
+  await expect(root(page).locator('.drawer')).toHaveCount(0);
+  await expectSelection('话题');
+  expect(errors).toEqual([]);
+});
+
 test('首页无 tab 参数时按原站默认分类显示选中标记', async ({ page }) => {
   await setup(page);
   await page.route(`${origin}/`, route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: listHTML().replace('href="/?tab=tech"', 'href="/?tab=tech" class="tab_current"') }));

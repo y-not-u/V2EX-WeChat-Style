@@ -185,6 +185,26 @@ test('新话题面板：预览、校验、失败草稿、成功跳转', async ({
   const fields = new URLSearchParams(state.writes[1].body); expect(fields.get('syntax')).toBe('markdown'); expect(fields.get('node_name')).toBe('create'); expect(fields.get('once')).toBe('54321');
 });
 
+test('分类和节点标记当前选择，分页和打开话题后保留标记', async ({ page }) => {
+  await setup(page); await page.goto(origin);
+  const toggle = root(page).getByRole('button', { name: '分类和节点', exact: true });
+  const selected = root(page).locator('.drawer-item[aria-current="true"]');
+  await toggle.click(); await expect(selected).toHaveText('全部');
+  await root(page).locator('.drawer').getByRole('button', { name: '技术', exact: true }).click();
+  await expect(root(page).locator('.context-title')).toHaveText('技术');
+  await toggle.click(); await expect(selected).toHaveText('技术');
+  await root(page).getByRole('button', { name: '关闭分类', exact: true }).click();
+  await page.goto(`${origin}/?tab=tech&p=2`);
+  await toggle.click(); await expect(selected).toHaveText('技术');
+  await root(page).locator('.drawer').getByRole('button', { name: '分享创造', exact: true }).click();
+  await toggle.click(); await expect(selected).toHaveText('分享创造');
+  await expect(selected).toHaveClass(/selected/);
+  await root(page).getByRole('button', { name: '关闭分类', exact: true }).click();
+  await openTopic(page);
+  await toggle.click(); await expect(selected).toHaveText('分享创造');
+  await page.screenshot({ path: '/tmp/v2ex-category-selected.png' });
+});
+
 test('节点列表结构、分类和评论分页', async ({ page }) => {
   await setup(page); await page.goto(origin); await root(page).getByRole('button', { name: '分类和节点', exact: true }).click();
   await root(page).locator('.drawer').getByRole('button', { name: '分享创造', exact: true }).click();

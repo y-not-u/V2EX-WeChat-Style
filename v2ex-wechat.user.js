@@ -1614,6 +1614,8 @@ svg { display: block; width: 24px; height: 24px; }
 .drawer-section { font-size: 12px; color: #999; padding: 10px 10px 6px; }
 .drawer-item { width: 100%; padding: 11px 14px; font-size: 15px; text-align: left; border-radius: 3px; }
 .drawer-item:hover { background: #e5e5e5; }
+.drawer-item.selected { color: var(--accent); background: #e2efdf; font-weight: 600; }
+.drawer-item.selected::after { content: '✓'; float: right; }
 .drawer-search { width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; font-size: 14px; }
 .modal-overlay { position: absolute; inset: 0; background: #0005; z-index: 30; display: grid; place-items: center; padding: 28px; }
 .modal { width: min(760px, 90vw); max-height: 90vh; background: #f7f7f7; border-radius: 7px; display: flex; flex-direction: column; box-shadow: 0 12px 50px #0003; }
@@ -4130,7 +4132,7 @@ svg { display: block; width: 24px; height: 24px; }
         this.renderRail();
       }
       write(`context:${this.user.user || "guest"}`, this.listURL);
-      this.context.textContent = list.tabs.find((t) => t.url === list.url)?.label || (list.url.includes("/my/topics") ? "我的收藏" : list.title === "V2EX" ? "话题" : list.title);
+      this.context.textContent = (list.tabs.length ? list.tabs : homeTabs).find((t) => this.isCurrentList(t.url))?.label || (list.url.includes("/my/topics") ? "我的收藏" : list.title === "V2EX" ? "话题" : list.title);
       this.listPanel.querySelector("h1").title = this.context.textContent;
       this.renderList();
       this.renderPagination(this.listPages, list.pagination, (url) => void this.navigate(url));
@@ -4507,6 +4509,11 @@ svg { display: block; width: 24px; height: 24px; }
       this.drawer?.remove();
       this.drawer = void 0;
     }
+    isCurrentList(input) {
+      const target = new URL(input, location.origin);
+      const current = new URL(this.listURL, location.origin);
+      return target.pathname.replace(/\/$/, "") === current.pathname.replace(/\/$/, "") && (target.pathname !== "/" || (target.searchParams.get("tab") || "all") === (current.searchParams.get("tab") || "all"));
+    }
     async openNodes() {
       if (this.drawer) {
         this.closeDrawer();
@@ -4517,8 +4524,14 @@ svg { display: block; width: 24px; height: 24px; }
       const head = el("header", "drawer-head");
       head.append(el("h2", "", "分类和节点"), button("关闭分类", () => this.closeDrawer(), "icon-button", "close"));
       const body = el("div", "drawer-body");
+      const item = (label, url) => {
+        const selected = this.isCurrentList(url);
+        const control = button(label, () => void this.navigate(url), `drawer-item${selected ? " selected" : ""}`);
+        if (selected) control.setAttribute("aria-current", "true");
+        return control;
+      };
       body.append(el("div", "drawer-section", "分类"));
-      for (const tab of this.list?.tabs.length ? this.list.tabs : homeTabs) body.append(button(tab.label, () => void this.navigate(tab.url), "drawer-item"));
+      for (const tab of this.list?.tabs.length ? this.list.tabs : homeTabs) body.append(item(tab.label, tab.url));
       body.append(el("div", "drawer-section", "节点"));
       const search = el("input", "drawer-search");
       search.placeholder = "搜索节点";
@@ -4533,7 +4546,7 @@ svg { display: block; width: 24px; height: 24px; }
       const render = () => {
         nodes.replaceChildren();
         const q2 = search.value.toLowerCase();
-        for (const n of all.filter((n2) => `${n2.name} ${n2.title}`.toLowerCase().includes(q2))) nodes.append(button(n.title, () => void this.navigate(`/go/${n.name}`), "drawer-item"));
+        for (const n of all.filter((n2) => `${n2.name} ${n2.title}`.toLowerCase().includes(q2))) nodes.append(item(n.title, `/go/${n.name}`));
       };
       search.addEventListener("input", render);
       render();

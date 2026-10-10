@@ -126,7 +126,7 @@ export class ChatApp {
     this.list = list; this.listURL = list.url;
     if (list.session.user !== this.user.user) { this.user = list.session; this.renderRail(); }
     write(`context:${this.user.user || 'guest'}`, this.listURL);
-    this.context.textContent = list.tabs.find(t => t.url === list.url)?.label || (list.url.includes('/my/topics') ? '我的收藏' : list.title === 'V2EX' ? '话题' : list.title);
+    this.context.textContent = (list.tabs.length ? list.tabs : homeTabs).find(t => this.isCurrentList(t.url))?.label || (list.url.includes('/my/topics') ? '我的收藏' : list.title === 'V2EX' ? '话题' : list.title);
     this.listPanel.querySelector('h1')!.title = this.context.textContent;
     this.renderList(); this.renderPagination(this.listPages, list.pagination, url => void this.navigate(url));
   }
@@ -366,13 +366,25 @@ export class ChatApp {
   private closePopup(): void { this.popup?.remove(); this.popup = undefined; }
   private closeDrawer(): void { this.drawer?.remove(); this.drawer = undefined; }
 
+  private isCurrentList(input: string): boolean {
+    const target = new URL(input, location.origin); const current = new URL(this.listURL, location.origin);
+    return target.pathname.replace(/\/$/, '') === current.pathname.replace(/\/$/, '') &&
+      (target.pathname !== '/' || (target.searchParams.get('tab') || 'all') === (current.searchParams.get('tab') || 'all'));
+  }
+
   private async openNodes(): Promise<void> {
     if (this.drawer) { this.closeDrawer(); return; }
     const drawer = this.drawer = el('aside', 'drawer'); drawer.setAttribute('aria-label', '分类和节点');
     const head = el('header', 'drawer-head'); head.append(el('h2', '', '分类和节点'), button('关闭分类', () => this.closeDrawer(), 'icon-button', 'close'));
     const body = el('div', 'drawer-body');
+    const item = (label: string, url: string) => {
+      const selected = this.isCurrentList(url);
+      const control = button(label, () => void this.navigate(url), `drawer-item${selected ? ' selected' : ''}`);
+      if (selected) control.setAttribute('aria-current', 'true');
+      return control;
+    };
     body.append(el('div', 'drawer-section', '分类'));
-    for (const tab of this.list?.tabs.length ? this.list.tabs : homeTabs) body.append(button(tab.label, () => void this.navigate(tab.url), 'drawer-item'));
+    for (const tab of this.list?.tabs.length ? this.list.tabs : homeTabs) body.append(item(tab.label, tab.url));
     body.append(el('div', 'drawer-section', '节点'));
     const search = el('input', 'drawer-search'); search.placeholder = '搜索节点'; search.setAttribute('aria-label', '搜索节点'); body.append(search);
     const nodes = el('div'); body.append(nodes); drawer.append(head, body); this.shell.append(drawer);
@@ -380,7 +392,7 @@ export class ChatApp {
     let all = initial.map(n => ({ name: new URL(n.url).pathname.split('/')[2], title: n.label }));
     const render = () => {
       nodes.replaceChildren(); const q = search.value.toLowerCase();
-      for (const n of all.filter(n => `${n.name} ${n.title}`.toLowerCase().includes(q))) nodes.append(button(n.title, () => void this.navigate(`/go/${n.name}`), 'drawer-item'));
+      for (const n of all.filter(n => `${n.name} ${n.title}`.toLowerCase().includes(q))) nodes.append(item(n.title, `/go/${n.name}`));
     }; search.addEventListener('input', render); render();
     try {
       const response = await fetch('/api/nodes/list.json?fields=name,title&sort_by=topics&reverse=1', { credentials: 'same-origin' });

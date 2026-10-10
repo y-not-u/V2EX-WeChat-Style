@@ -131,6 +131,8 @@ svg { display: block; width: 24px; height: 24px; }
 .drawer-section { font-size: 12px; color: #999; padding: 10px 10px 6px; }
 .drawer-item { width: 100%; padding: 11px 14px; font-size: 15px; text-align: left; border-radius: 3px; }
 .drawer-item:hover { background: #e5e5e5; }
+.drawer-item.selected { color: var(--accent); background: #e2efdf; font-weight: 600; }
+.drawer-item.selected::after { content: '✓'; float: right; }
 .drawer-search { width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; font-size: 14px; }
 .modal-overlay { position: absolute; inset: 0; background: #0005; z-index: 30; display: grid; place-items: center; padding: 28px; }
 .modal { width: min(760px, 90vw); max-height: 90vh; background: #f7f7f7; border-radius: 7px; display: flex; flex-direction: column; box-shadow: 0 12px 50px #0003; }

@@ -225,6 +225,60 @@ test('原站 textarea 标题与长正文分别提交，不覆盖标题', async (
   expect(fields.get('once')).toBe('54321');
 });
 
+for (const [name, response] of [
+  ['location.href', '<script>window.location.href = "/t/7";</script>'],
+  ['location', '<script>location = "/t/7";</script>'],
+  ['location.replace', '<script>location.replace("/t/7");</script>'],
+  ['meta refresh', '<meta http-equiv="refresh" content="0; URL=/t/7">'],
+] as const) test(`发帖成功返回 ${name} 跳转时读取主题并确认成功`, async ({ page }) => {
+  const state = await setup(page);
+  await page.route('**/new', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    state.writes.push({ url: route.request().url(), method: 'POST', body: route.request().postData() || '' });
+    return route.fulfill({ contentType: 'text/html; charset=utf-8', body: response });
+  });
+  await page.goto(origin);
+  await root(page).getByRole('button', { name: '发表新话题' }).click();
+  const dialog = root(page).getByRole('dialog');
+  await dialog.getByLabel('标题', { exact: true }).fill('【开源】微信主题来浏览V2EX');
+  await dialog.getByLabel('节点', { exact: true }).fill('create');
+  await dialog.getByLabel('正文', { exact: true }).fill('发帖成功后读取主题页');
+  await dialog.getByRole('button', { name: '发表', exact: true }).click();
+  await expect(page).toHaveURL(`${origin}/t/7`);
+  await expect(dialog).toHaveCount(0);
+  await expect(root(page).getByRole('status')).toHaveText('话题已发表');
+  expect(state.writes).toHaveLength(1);
+});
+
+for (const [name, response, error] of [
+  ['外站跳转', '<script>location.href = "https://example.com/t/7";</script>', '服务器未确认提交成功'],
+  ['没有成功依据', '<div id="Main">正在处理</div>', '服务器未确认提交成功'],
+  ['返回错误', '<div class="problem">发帖受限</div><script>location.href = "/t/7";</script>', '发帖受限'],
+  ['跳转后没有主题', '<script>location.href = "/t/999";</script>', '服务器未确认提交成功'],
+] as const) test(`发帖响应${name}时保留草稿，不误报成功`, async ({ page }) => {
+  const state = await setup(page);
+  await page.route('**/new', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    state.writes.push({ url: route.request().url(), method: 'POST', body: route.request().postData() || '' });
+    return route.fulfill({ contentType: 'text/html; charset=utf-8', body: response });
+  });
+  await page.route('**/t/999', route => route.fulfill({ contentType: 'text/html', body: wrapper('<div>尚未创建主题</div>') }));
+  await page.goto(origin);
+  await root(page).getByRole('button', { name: '发表新话题' }).click();
+  const dialog = root(page).getByRole('dialog');
+  await dialog.getByLabel('标题', { exact: true }).fill('保留的标题');
+  await dialog.getByLabel('节点', { exact: true }).fill('create');
+  await dialog.getByLabel('正文', { exact: true }).fill('保留的正文');
+  await dialog.getByRole('button', { name: '发表', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText(error);
+  await expect(page).toHaveURL(origin + '/');
+  expect(state.writes).toHaveLength(1);
+  await dialog.getByRole('button', { name: '取消', exact: true }).click();
+  await root(page).getByRole('button', { name: '发表新话题' }).click();
+  await expect(dialog.getByLabel('标题', { exact: true })).toHaveValue('保留的标题');
+  await expect(dialog.getByLabel('正文', { exact: true })).toHaveValue('保留的正文');
+});
+
 test('V2EX_TAB Cookie 提供默认分类，URL 参数和原站标记优先', async ({ page }) => {
   await setup(page);
   await page.context().addCookies([{ name: 'V2EX_TAB', value: '2|1:0|10:1791614344|8:V2EX_TAB|12:Y3JlYXRpdmU=|83dc886f5e9a98f17259572e1de460c8a185645767a647778bb3f388d2b20d0b', url: origin }]);

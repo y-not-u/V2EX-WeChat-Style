@@ -3616,6 +3616,24 @@ svg { display: block; width: 24px; height: 24px; }
     if (!/^\d+$/.test(token)) throw new Error("登录状态或校验令牌失效，请在原站重新登录。");
     return token;
   }
+  function topicRedirect(doc, base, refresh) {
+    const candidates = [];
+    for (const value of [refresh, ...Array.from(doc.querySelectorAll("meta[http-equiv]")).filter((el2) => el2.getAttribute("http-equiv")?.toLowerCase() === "refresh").map((el2) => el2.getAttribute("content"))]) {
+      const target = value?.match(/^\s*\d+(?:\.\d+)?\s*;\s*url\s*=\s*(.*?)\s*$/i)?.[1];
+      if (target) candidates.push(target.replace(/^(['"])(.*)\1$/, "$2"));
+    }
+    for (const script of doc.querySelectorAll("script:not([src])")) {
+      const redirects = /(?:\b(?:window\.|document\.)?location(?:\.href)?\s*=\s*|\b(?:window\.|document\.)?location\.(?:replace|assign)\s*\(\s*)(['"])([^'"\r\n]+)\1/g;
+      for (const match of (script.textContent || "").matchAll(redirects)) candidates.push(match[2]);
+    }
+    for (const target of candidates) {
+      try {
+        const url = sameOrigin(new URL(target, base).href);
+        if (/^\/t\/\d+\/?$/.test(url.pathname)) return url.href;
+      } catch {
+      }
+    }
+  }
   async function submitForm(form, values) {
     const fields = { ...form.fields, ...values };
     if ("once" in fields) fields.once = await freshOnce();
@@ -3629,11 +3647,22 @@ svg { display: block; width: 24px; height: 24px; }
     });
     if (!response.ok) throw new Error(`提交失败（${response.status}），草稿已保留。`);
     if (new URL(response.url).origin !== location.origin || new URL(response.url).pathname === "/signin") throw new Error("登录已失效，草稿已保留，请重新登录。");
-    const doc = parseDocument(await response.text());
+    let doc = parseDocument(await response.text());
     const error = serverError(doc);
     if (error) throw new Error(error);
+    let resultURL = response.url;
+    if (!doc.querySelector("#Main .header h1")) {
+      const redirect = topicRedirect(doc, resultURL, response.headers.get("refresh"));
+      if (redirect) {
+        const page = await loadPage(redirect);
+        doc = page.doc;
+        resultURL = page.url;
+        const redirectError = serverError(doc);
+        if (redirectError) throw new Error(redirectError);
+      }
+    }
     if (!doc.querySelector("#Main .header h1")) throw new Error("服务器未确认提交成功，草稿已保留，请在原站检查。");
-    return { doc, url: response.url };
+    return { doc, url: resultURL };
   }
   async function runAction(action2) {
     const url = sameOrigin(action2.url);

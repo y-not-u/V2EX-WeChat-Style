@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         V2EX 微信聊天皮肤
 // @namespace    v2ex-wechat-style
-// @version      1.0.9
+// @version      1.0.10
 // @description  用微信三栏布局浏览 V2EX，支持回复、发帖、收藏和感谢
 // @author       y-not-u
 // @homepageURL  https://github.com/y-not-u/V2EX-WeChat-Style

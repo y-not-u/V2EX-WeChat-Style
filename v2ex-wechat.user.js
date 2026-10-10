@@ -2380,7 +2380,7 @@ svg { display: block; width: 24px; height: 24px; }
     const originalDocument = document2;
     const currentScript = originalDocument.currentScript;
     window2.DocumentFragment;
-    const HTMLTemplateElement = window2.HTMLTemplateElement, Node = window2.Node, Element = window2.Element, NodeFilter = window2.NodeFilter;
+    const HTMLTemplateElement = window2.HTMLTemplateElement, Node = window2.Node, Element = window2.Element, NodeFilter2 = window2.NodeFilter;
     window2.NamedNodeMap === void 0 && (window2.NamedNodeMap || window2.MozNamedAttrMap);
     window2.HTMLFormElement;
     const DOMParser2 = window2.DOMParser, trustedTypes = window2.trustedTypes;
@@ -2916,7 +2916,7 @@ svg { display: block; width: 24px; height: 24px; }
     };
     const _createNodeIterator = function _createNodeIterator2(root) {
       const doc = getOwnerDocument ? getOwnerDocument(root) : root.ownerDocument;
-      return createNodeIterator.call(doc || root, root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
+      return createNodeIterator.call(doc || root, root, NodeFilter2.SHOW_ELEMENT | NodeFilter2.SHOW_COMMENT | NodeFilter2.SHOW_TEXT | NodeFilter2.SHOW_PROCESSING_INSTRUCTION | NodeFilter2.SHOW_CDATA_SECTION, null);
     };
     const _stripTemplateExpressions = function _stripTemplateExpressions2(value) {
       value = stringReplace(value, MUSTACHE_EXPR$1, " ");
@@ -2928,7 +2928,7 @@ svg { display: block; width: 24px; height: 24px; }
       var _node$querySelectorAl;
       node.normalize();
       const doc = getOwnerDocument ? getOwnerDocument(node) : node.ownerDocument;
-      const walker = createNodeIterator.call(doc || node, node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION, null);
+      const walker = createNodeIterator.call(doc || node, node, NodeFilter2.SHOW_TEXT | NodeFilter2.SHOW_COMMENT | NodeFilter2.SHOW_CDATA_SECTION | NodeFilter2.SHOW_PROCESSING_INSTRUCTION, null);
       let currentNode = walker.nextNode();
       while (currentNode) {
         currentNode.data = _stripTemplateExpressions(currentNode.data);
@@ -3415,6 +3415,7 @@ svg { display: block; width: 24px; height: 24px; }
     });
     const template = document.createElement("template");
     template.innerHTML = clean;
+    embedImageURLs(template.content);
     template.content.querySelectorAll("[class]").forEach((el2) => {
       const classes = [...el2.classList].filter((c) => ["markdown_body", "embedded_image", "emoji"].includes(c) || /^language-[a-z0-9_-]+$/i.test(c));
       if (classes.length) el2.setAttribute("class", classes.join(" "));
@@ -3442,6 +3443,51 @@ svg { display: block; width: 24px; height: 24px; }
       }
     });
     return template.innerHTML;
+  }
+  function embedImageURLs(content) {
+    const isImageURL = (value) => {
+      try {
+        const url = new URL(value);
+        return ["http:", "https:"].includes(url.protocol) && /\.(?:png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(url.pathname);
+      } catch {
+        return false;
+      }
+    };
+    const preview = (url) => {
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = url;
+      img.className = "embedded_image";
+      return img;
+    };
+    content.querySelectorAll("a[href]").forEach((link) => {
+      if (link.closest("pre, code, kbd, samp") || link.children.length) return;
+      const href = link.getAttribute("href");
+      if (link.textContent?.trim() === href && isImageURL(href)) link.replaceChildren(preview(href));
+    });
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      if (node.parentElement?.closest("a, pre, code, kbd, samp")) continue;
+      const value = node.data;
+      const replacement = document.createDocumentFragment();
+      let end = 0;
+      for (const match of value.matchAll(/https?:\/\/[^\s<>"'，。；！？、（）【】]+/gi)) {
+        const url = match[0].replace(/[.,;!?\)\]]+$/, "");
+        if (!isImageURL(url)) continue;
+        replacement.append(value.slice(end, match.index));
+        const link = document.createElement("a");
+        link.href = url;
+        link.append(preview(url));
+        replacement.append(link);
+        end = match.index + url.length;
+      }
+      if (end) {
+        replacement.append(value.slice(end));
+        node.replaceWith(replacement);
+      }
+    }
   }
   function pagination(doc, base) {
     const current = Number(text2(doc.querySelector("#Main .page_current"))) || Number(new URL(base).searchParams.get("p")) || 1;

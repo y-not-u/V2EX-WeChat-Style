@@ -101,6 +101,35 @@ test('三栏、列表筛选、正文、附言、气泡与历史导航', async ({
   expect(errors).toEqual([]);
 });
 
+for (const direct of [true, false]) test(`图片直链自动显示图片（${direct ? '直接打开' : '列表进入'}）`, async ({ page }) => {
+  await setup(page);
+  const url = 'https://i.imgur.com/kBBHeB9.png';
+  const html = topicHTML()
+    .replace('把 V2EX 的话题当成会话，正文和回复变成聊天气泡。', `正文图片：${url}，后续文字。`)
+    .replace('补充：支持 Ctrl+Enter 发送回复。', `<a href="${url}?preview=1">${url}?preview=1</a>`)
+    .replace('针不戳', `<a href="${url}">${url}</a><a href="${url}">下载图片</a><code>${url}</code><pre>${url}</pre><a href="${url}"><img src="${url}"></a>`);
+  await page.route(`${origin}/t/1`, route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: html }));
+  await page.route('https://i.imgur.com/**', route => route.fulfill({
+    contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=', 'base64'),
+  }));
+  await page.goto(direct ? `${origin}/t/1` : origin);
+  if (!direct) await openTopic(page);
+  const body = root(page).locator('.message.original .bubble-body').first();
+  await expect(body.locator('img')).toHaveCount(1);
+  await expect(body).toContainText('，后续文字。');
+  const image = body.locator('img');
+  await expect(image).toHaveAttribute('src', url);
+  await expect(image).toHaveAttribute('referrerpolicy', 'no-referrer');
+  await expect(image.locator('..')).toHaveAttribute('href', url);
+  await expect.poll(() => image.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBe(1);
+  await expect(root(page).locator('.message.original .bubble-body').nth(1).locator('img')).toHaveAttribute('src', `${url}?preview=1`);
+  const reply = root(page).locator('#r_102 .bubble-body');
+  await expect(reply.locator('img')).toHaveCount(2);
+  await expect(reply.getByRole('link', { name: '下载图片', exact: true })).toHaveText('下载图片');
+  await expect(reply.locator('code')).toHaveText(url);
+  await expect(reply.locator('pre')).toHaveText(url);
+});
+
 test('正文和回复优先显示各自的完整时间，无完整时间时保留原文', async ({ page }) => {
   await setup(page);
   const replyTimes = ['2025-12-25 09:12:03 +08:00', '2025-12-25 10:45:56 +08:00', '', '未知时间'];

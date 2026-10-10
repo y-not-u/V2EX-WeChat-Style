@@ -49,6 +49,7 @@ export function safeHTML(html: string, base: string): string {
   });
   const template = document.createElement('template');
   template.innerHTML = clean;
+  embedImageURLs(template.content);
   template.content.querySelectorAll('[class]').forEach(el => {
     const classes = [...el.classList].filter(c => ['markdown_body', 'embedded_image', 'emoji'].includes(c) || /^language-[a-z0-9_-]+$/i.test(c));
     if (classes.length) el.setAttribute('class', classes.join(' ')); else el.removeAttribute('class');
@@ -67,6 +68,39 @@ export function safeHTML(html: string, base: string): string {
     } catch { el.removeAttribute(attr); }
   });
   return template.innerHTML;
+}
+
+function embedImageURLs(content: DocumentFragment): void {
+  const isImageURL = (value: string): boolean => {
+    try {
+      const url = new URL(value);
+      return ['http:', 'https:'].includes(url.protocol) && /\.(?:png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(url.pathname);
+    } catch { return false; }
+  };
+  const preview = (url: string): HTMLImageElement => {
+    const img = document.createElement('img'); img.src = url; img.alt = url; img.className = 'embedded_image'; return img;
+  };
+  // Preserve named links, existing images, and literal examples in code blocks.
+  content.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => {
+    if (link.closest('pre, code, kbd, samp') || link.children.length) return;
+    const href = link.getAttribute('href')!;
+    if (link.textContent?.trim() === href && isImageURL(href)) link.replaceChildren(preview(href));
+  });
+  const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+  for (const node of nodes) {
+    if (node.parentElement?.closest('a, pre, code, kbd, samp')) continue;
+    const value = node.data; const replacement = document.createDocumentFragment(); let end = 0;
+    for (const match of value.matchAll(/https?:\/\/[^\s<>"'，。；！？、（）【】]+/gi)) {
+      const url = match[0].replace(/[.,;!?\)\]]+$/, '');
+      if (!isImageURL(url)) continue;
+      replacement.append(value.slice(end, match.index));
+      const link = document.createElement('a'); link.href = url; link.append(preview(url)); replacement.append(link);
+      end = match.index! + url.length;
+    }
+    if (end) { replacement.append(value.slice(end)); node.replaceWith(replacement); }
+  }
 }
 
 export function pagination(doc: Document, base: string): Pagination {

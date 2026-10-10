@@ -19,7 +19,9 @@
     "dev": "node scripts/build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && playwright test",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "preversion": "npm run check",
+    "version": "npm run build && git add v2ex-wechat.user.js"
   },
   "dependencies": {
     "dompurify": "^3.3.0",

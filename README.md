@@ -51,6 +51,21 @@ npm run build       # 构建产物 v2ex-wechat.user.js
 npm run check       # 类型检查 + Playwright 自动化测试
 ```
 
+### 发布更新
+
+脚本的 `@version` 在构建时自动读取 `package.json` 的 `version`。更新地址和下载地址均指向 `main` 分支的 `v2ex-wechat.user.js`。
+
+在 `main` 分支提交功能修改、确保工作区干净后，执行：
+
+```bash
+npm version patch   # 例如 1.0.0 → 1.0.1；新功能用 minor，重大变更用 major
+git push origin main --follow-tags
+```
+
+`npm version` 会先运行类型检查和自动化测试，通过后同步更新 `package.json`、`package-lock.json`，重新构建脚本，并将这些文件一起提交、创建版本标签。推送成功后，开启自动更新的油猴会在下次检查时发现更高版本并下载更新；也可以在油猴管理面板手动检查更新。
+
+仅推送源码或创建 GitHub Release 不会改变脚本版本。每次发布都需要提高版本号并推送生成的脚本。检查更新还需要用户能够访问 `raw.githubusercontent.com`。
+
 ---
 
 ## 📄 许可证

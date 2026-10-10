@@ -40,7 +40,7 @@ try {
     run(process.execPath, [process.env.npm_execpath, 'run', 'build']);
     run('git', ['add', 'package.json', 'package-lock.json', 'v2ex-wechat.user.js']);
     run('git', ['commit', '-m', version]);
-    run('git', ['tag', `v${version}`]);
+    run('git', ['tag', '-a', `v${version}`, '-m', version]);
   } else {
     run(process.execPath, [process.env.npm_execpath, 'version', bump]);
   }

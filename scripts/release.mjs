@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 function run(command, args, capture = false) {
@@ -15,9 +16,11 @@ function run(command, args, capture = false) {
 let versionCreated = false;
 try {
   const args = process.argv.slice(2);
-  const bump = args[0] ?? 'patch';
-  if (args.length > 1 || !['patch', 'minor', 'major'].includes(bump)) {
-    throw new Error('用法：npm run release [-- patch|minor|major]');
+  const noTest = args.includes('--no-test') || Boolean(process.env.NO_TEST);
+  const bumpArgs = args.filter((arg) => arg !== '--no-test');
+  const bump = bumpArgs[0] ?? 'patch';
+  if (bumpArgs.length > 1 || !['patch', 'minor', 'major'].includes(bump)) {
+    throw new Error('用法：npm run release [-- patch|minor|major] [--no-test]');
   }
   if (run('git', ['branch', '--show-current'], true) !== 'main') {
     throw new Error('请切换到 main 分支后发布。');
@@ -30,7 +33,17 @@ try {
     throw new Error('请通过 npm run release 执行发布。');
   }
 
-  run(process.execPath, [process.env.npm_execpath, 'version', bump]);
+  if (noTest) {
+    run(process.execPath, [process.env.npm_execpath, 'run', 'typecheck']);
+    run(process.execPath, [process.env.npm_execpath, 'version', bump, '--no-git-tag-version', '--ignore-scripts']);
+    const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+    run(process.execPath, [process.env.npm_execpath, 'run', 'build']);
+    run('git', ['add', 'package.json', 'package-lock.json', 'v2ex-wechat.user.js']);
+    run('git', ['commit', '-m', version]);
+    run('git', ['tag', `v${version}`]);
+  } else {
+    run(process.execPath, [process.env.npm_execpath, 'version', bump]);
+  }
   versionCreated = true;
   run('git', ['push', 'origin', 'main', '--follow-tags']);
   console.log('发布完成，油猴会在下次检查更新时发现新版本。');

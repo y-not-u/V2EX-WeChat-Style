@@ -40,6 +40,7 @@ export class ChatApp {
   private disposed = false;
   private pending = new Set<string>();
   private reply?: HTMLTextAreaElement;
+  private preferredReplyHeight = read<number | null>('layout:reply-height', null);
   private popup?: HTMLElement;
   private settingsButton?: HTMLButtonElement;
   private fontSize: FontSize = 'medium';
@@ -73,6 +74,7 @@ export class ChatApp {
     document.body.append(this.host);
     this.updatePanelWidth();
     window.addEventListener('resize', this.updatePanelWidth);
+    window.addEventListener('resize', this.resizeReply);
     history.replaceState(this.historyContext(), '', location.href);
     window.addEventListener('popstate', this.onPopState);
     window.addEventListener('hashchange', this.onHashChange);
@@ -91,6 +93,7 @@ export class ChatApp {
     clearTimeout(this.toastTimer);
     clearTimeout(this.scrollTimer);
     window.removeEventListener('resize', this.updatePanelWidth);
+    window.removeEventListener('resize', this.resizeReply);
     window.removeEventListener('popstate', this.onPopState); window.removeEventListener('hashchange', this.onHashChange);
     this.host.remove();
   }
@@ -220,7 +223,7 @@ export class ChatApp {
     sizes.setAttribute('role', 'group'); sizes.setAttribute('aria-label', '字号');
     for (const [value, label] of [['small', '小'], ['medium', '中'], ['large', '大']] as const) {
       const control = button(label, () => {
-        this.fontSize = value; this.host.dataset.fontSize = value; write('font-size', value);
+        this.fontSize = value; this.host.dataset.fontSize = value; write('font-size', value); this.resizeReply();
         sizes.querySelectorAll('button').forEach(option => option.setAttribute('aria-pressed', String(option === control)));
       });
       control.setAttribute('aria-pressed', String(value === this.fontSize)); sizes.append(control);
@@ -411,13 +414,77 @@ export class ChatApp {
     this.reply.addEventListener('input', () => { this.saveDraft(); send.disabled = this.navigating || this.pending.has(`reply:${topic.id}`) || !this.reply!.value.trim(); this.resizeReply(); });
     this.reply.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.isComposing) { event.preventDefault(); void this.sendReply(); } });
     toolbar.append(emoji); actions.append(send); composer.append(toolbar, this.reply, actions);
+    this.buildComposerSplitter(composer);
     if (!available) {
       const note = el('div', 'compose-note', this.user.user ? topic.replyNotice || '此话题暂时无法回复' : '登录后即可回复');
       note.append(nativeLink(this.user.user ? '查看原页面' : '登录 V2EX', this.user.user ? topic.url : `/signin?next=${encodeURIComponent(new URL(topic.url).pathname)}`)); composer.append(note);
     }
     requestAnimationFrame(() => this.resizeReply()); return composer;
   }
-  private resizeReply(): void { if (this.reply) { this.reply.style.height = 'auto'; this.reply.style.height = `${Math.min(180, Math.max(104, this.reply.scrollHeight))}px`; } }
+  private buildComposerSplitter(composer: HTMLElement): void {
+    const splitter = el('div', 'composer-splitter');
+    splitter.tabIndex = 0;
+    splitter.setAttribute('role', 'separator');
+    splitter.setAttribute('aria-orientation', 'horizontal');
+    splitter.setAttribute('aria-label', '调整发送区域高度');
+    splitter.title = '上下拖动调整发送区域高度，双击恢复默认；也可使用上下方向键';
+    let pointer: { id: number; y: number; height: number } | undefined;
+    const setHeight = (height: number) => {
+      this.preferredReplyHeight = height;
+      this.resizeReply();
+      this.preferredReplyHeight = this.reply!.getBoundingClientRect().height;
+    };
+    splitter.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || pointer) return;
+      event.preventDefault(); splitter.focus();
+      pointer = { id: event.pointerId, y: event.clientY, height: this.reply!.getBoundingClientRect().height };
+      splitter.setPointerCapture(event.pointerId);
+      composer.classList.add('resizing-composer');
+    });
+    splitter.addEventListener('pointermove', event => {
+      if (pointer?.id === event.pointerId) setHeight(pointer.height + pointer.y - event.clientY);
+    });
+    const finish = (event: PointerEvent) => {
+      if (pointer?.id !== event.pointerId) return;
+      pointer = undefined; composer.classList.remove('resizing-composer');
+      write('layout:reply-height', this.preferredReplyHeight);
+      if (splitter.hasPointerCapture(event.pointerId)) splitter.releasePointerCapture(event.pointerId);
+    };
+    splitter.addEventListener('pointerup', finish);
+    splitter.addEventListener('pointercancel', finish);
+    splitter.addEventListener('lostpointercapture', finish);
+    splitter.addEventListener('dblclick', () => {
+      this.preferredReplyHeight = null; write('layout:reply-height', null); this.resizeReply();
+    });
+    splitter.addEventListener('keydown', event => {
+      if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const height = this.reply!.getBoundingClientRect().height;
+      setHeight(event.key === 'Home' ? 0 : event.key === 'End' ? this.chat.clientHeight : height + (event.key === 'ArrowUp' ? 16 : -16));
+      write('layout:reply-height', this.preferredReplyHeight);
+    });
+    composer.prepend(splitter);
+  }
+  private resizeReply = (): void => {
+    const reply = this.reply;
+    if (!reply?.isConnected) return;
+    const composer = reply.parentElement!;
+    const style = getComputedStyle(reply);
+    const min = parseFloat(style.lineHeight) + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+    const overhead = composer.getBoundingClientRect().height - reply.getBoundingClientRect().height;
+    const header = this.chat.querySelector('.chat-head')?.getBoundingClientRect().height || 0;
+    const max = Math.max(min, this.chat.clientHeight - header - overhead - 120);
+    const preferred = this.preferredReplyHeight;
+    let height: number;
+    if (typeof preferred === 'number' && Number.isFinite(preferred)) height = preferred;
+    else { reply.style.height = 'auto'; height = Math.min(180, Math.max(104, reply.scrollHeight)); }
+    reply.style.height = `${Math.min(max, Math.max(min, height))}px`;
+    const splitter = composer.querySelector('.composer-splitter');
+    splitter?.setAttribute('aria-valuemin', `${Math.round(min)}`);
+    splitter?.setAttribute('aria-valuemax', `${Math.round(max)}`);
+    splitter?.setAttribute('aria-valuenow', `${Math.round(reply.getBoundingClientRect().height)}`);
+    splitter?.setAttribute('aria-valuetext', `输入框高度 ${Math.round(reply.getBoundingClientRect().height)} 像素`);
+  };
   private saveDraft(): void { if (this.topic && this.reply) write(draftKey(this.user.user, this.topic.id), this.reply.value); }
   private setComposerBusy(busy: boolean): void {
     const send = this.chat.querySelector<HTMLButtonElement>('[data-send]');

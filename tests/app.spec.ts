@@ -469,6 +469,42 @@ test('微信输入面板：仅表情工具、光标插入、草稿恢复与发�
   expect(errors).toEqual([]);
 });
 
+test('发送区域可拖动到一行，记住高度并适应窗口大小', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });
+  await setup(page); await page.goto(`${origin}/t/1`);
+  await expect(page).toHaveTitle('V2EX');
+  const input = root(page).getByRole('textbox', { name: '回复内容' });
+  const splitter = root(page).getByRole('separator', { name: '调整发送区域高度' });
+  await expect(splitter).toHaveAttribute('aria-valuenow', '104');
+  const drag = async (delta: number) => {
+    const box = (await splitter.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + delta, { steps: 8 });
+    await page.mouse.up();
+  };
+  await drag(160);
+  await expect(splitter).toHaveAttribute('aria-valuenow', '32');
+  await input.fill('第一行\n第二行\n第三行');
+  expect((await input.boundingBox())!.height).toBe(32);
+  expect(await input.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  await page.screenshot({ path: '/tmp/v2ex-composer-minimum.png' });
+  await drag(-200);
+  await expect(splitter).toHaveAttribute('aria-valuenow', '232');
+  await openTopic(page, 2); await expect(splitter).toHaveAttribute('aria-valuenow', '232');
+  await page.reload(); await expect(splitter).toHaveAttribute('aria-valuenow', '232');
+  await splitter.press('End');
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await expect.poll(async () => (await root(page).locator('.chat-scroll').boundingBox())!.height).toBeGreaterThanOrEqual(119);
+  const sendBox = (await root(page).getByRole('button', { name: '发送', exact: true }).boundingBox())!;
+  expect(sendBox.y + sendBox.height).toBeLessThanOrEqual(600);
+  await splitter.press('Home'); await expect(splitter).toHaveAttribute('aria-valuenow', '32');
+  await page.screenshot({ path: '/tmp/v2ex-composer-resized-compact.png' });
+  await splitter.dblclick(); await expect(splitter).toHaveAttribute('aria-valuenow', '104');
+  expect(errors).toEqual([]);
+});
+
 test('未登录可读不可写，发帖和收藏引导原站登录', async ({ page }) => {
   const state = await setup(page, { loggedIn: false }); await page.goto(`${origin}/t/1`);
   await expect(root(page).getByRole('textbox', { name: '回复内容' })).toBeDisabled();

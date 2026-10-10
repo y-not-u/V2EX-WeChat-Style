@@ -1343,10 +1343,15 @@ svg { display: block; width: 24px; height: 24px; }
 .supplement-label { font-size: 12px; color: #999; margin-bottom: 9px; }
 .thread-note { text-align: center; margin: 18px auto; font-size: 12px; color: #999; }
 .composer { position: relative; background: #f3f3f3; border-top: 1px solid var(--line); padding: 14px 24px 20px; flex-shrink: 0; }
+.composer-splitter { position: absolute; top: -5px; left: 0; right: 0; height: 10px; z-index: 5; cursor: row-resize; touch-action: none; }
+.composer-splitter::after { content: ''; position: absolute; top: 4px; left: 0; right: 0; height: 2px; background: transparent; transition: background .12s; }
+.composer-splitter:hover::after, .composer-splitter:focus-visible::after, .resizing-composer .composer-splitter::after { background: var(--accent); }
+.composer-splitter:focus-visible { outline: none; }
+.resizing-composer, .resizing-composer * { cursor: row-resize !important; user-select: none !important; }
 .compose-toolbar { display: flex; align-items: center; height: 36px; margin-bottom: 8px; }
 .emoji-toggle { width: 36px; height: 36px; color: #444; }
 .emoji-toggle svg { width: 28px; height: 28px; }
-.reply-input { display: block; width: 100%; resize: none; min-height: 104px; max-height: 180px; border: none; outline-offset: 0; border-radius: 0; padding: 4px 2px; background: transparent; line-height: 1.5; }
+.reply-input { display: block; width: 100%; resize: none; min-height: calc(1.5em + 8px); border: none; outline-offset: 0; border-radius: 0; padding: 4px 2px; background: transparent; line-height: 1.5; overflow-y: auto; }
 .reply-input::placeholder { color: #999; }
 .compose-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
 .send { background: #e9e9e9; color: #07a64b; border-radius: 5px; padding: 8px 24px; min-width: 140px; min-height: 40px; white-space: nowrap; }
@@ -3895,6 +3900,7 @@ svg { display: block; width: 24px; height: 24px; }
     disposed = false;
     pending = /* @__PURE__ */ new Set();
     reply;
+    preferredReplyHeight = read("layout:reply-height", null);
     popup;
     settingsButton;
     fontSize = "medium";
@@ -3909,6 +3915,7 @@ svg { display: block; width: 24px; height: 24px; }
       document.body.append(this.host);
       this.updatePanelWidth();
       window.addEventListener("resize", this.updatePanelWidth);
+      window.addEventListener("resize", this.resizeReply);
       history.replaceState(this.historyContext(), "", location.href);
       window.addEventListener("popstate", this.onPopState);
       window.addEventListener("hashchange", this.onHashChange);
@@ -3928,6 +3935,7 @@ svg { display: block; width: 24px; height: 24px; }
       clearTimeout(this.toastTimer);
       clearTimeout(this.scrollTimer);
       window.removeEventListener("resize", this.updatePanelWidth);
+      window.removeEventListener("resize", this.resizeReply);
       window.removeEventListener("popstate", this.onPopState);
       window.removeEventListener("hashchange", this.onHashChange);
       this.host.remove();
@@ -4099,6 +4107,7 @@ svg { display: block; width: 24px; height: 24px; }
           this.fontSize = value;
           this.host.dataset.fontSize = value;
           write("font-size", value);
+          this.resizeReply();
           sizes.querySelectorAll("button").forEach((option) => option.setAttribute("aria-pressed", String(option === control)));
         });
         control.setAttribute("aria-pressed", String(value === this.fontSize));
@@ -4383,6 +4392,7 @@ svg { display: block; width: 24px; height: 24px; }
       toolbar.append(emoji);
       actions.append(send);
       composer.append(toolbar, this.reply, actions);
+      this.buildComposerSplitter(composer);
       if (!available) {
         const note = el("div", "compose-note", this.user.user ? topic.replyNotice || "此话题暂时无法回复" : "登录后即可回复");
         note.append(nativeLink(this.user.user ? "查看原页面" : "登录 V2EX", this.user.user ? topic.url : `/signin?next=${encodeURIComponent(new URL(topic.url).pathname)}`));
@@ -4391,12 +4401,77 @@ svg { display: block; width: 24px; height: 24px; }
       requestAnimationFrame(() => this.resizeReply());
       return composer;
     }
-    resizeReply() {
-      if (this.reply) {
-        this.reply.style.height = "auto";
-        this.reply.style.height = `${Math.min(180, Math.max(104, this.reply.scrollHeight))}px`;
-      }
+    buildComposerSplitter(composer) {
+      const splitter = el("div", "composer-splitter");
+      splitter.tabIndex = 0;
+      splitter.setAttribute("role", "separator");
+      splitter.setAttribute("aria-orientation", "horizontal");
+      splitter.setAttribute("aria-label", "调整发送区域高度");
+      splitter.title = "上下拖动调整发送区域高度，双击恢复默认；也可使用上下方向键";
+      let pointer;
+      const setHeight = (height) => {
+        this.preferredReplyHeight = height;
+        this.resizeReply();
+        this.preferredReplyHeight = this.reply.getBoundingClientRect().height;
+      };
+      splitter.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0 || pointer) return;
+        event.preventDefault();
+        splitter.focus();
+        pointer = { id: event.pointerId, y: event.clientY, height: this.reply.getBoundingClientRect().height };
+        splitter.setPointerCapture(event.pointerId);
+        composer.classList.add("resizing-composer");
+      });
+      splitter.addEventListener("pointermove", (event) => {
+        if (pointer?.id === event.pointerId) setHeight(pointer.height + pointer.y - event.clientY);
+      });
+      const finish = (event) => {
+        if (pointer?.id !== event.pointerId) return;
+        pointer = void 0;
+        composer.classList.remove("resizing-composer");
+        write("layout:reply-height", this.preferredReplyHeight);
+        if (splitter.hasPointerCapture(event.pointerId)) splitter.releasePointerCapture(event.pointerId);
+      };
+      splitter.addEventListener("pointerup", finish);
+      splitter.addEventListener("pointercancel", finish);
+      splitter.addEventListener("lostpointercapture", finish);
+      splitter.addEventListener("dblclick", () => {
+        this.preferredReplyHeight = null;
+        write("layout:reply-height", null);
+        this.resizeReply();
+      });
+      splitter.addEventListener("keydown", (event) => {
+        if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const height = this.reply.getBoundingClientRect().height;
+        setHeight(event.key === "Home" ? 0 : event.key === "End" ? this.chat.clientHeight : height + (event.key === "ArrowUp" ? 16 : -16));
+        write("layout:reply-height", this.preferredReplyHeight);
+      });
+      composer.prepend(splitter);
     }
+    resizeReply = () => {
+      const reply = this.reply;
+      if (!reply?.isConnected) return;
+      const composer = reply.parentElement;
+      const style = getComputedStyle(reply);
+      const min = parseFloat(style.lineHeight) + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const overhead = composer.getBoundingClientRect().height - reply.getBoundingClientRect().height;
+      const header = this.chat.querySelector(".chat-head")?.getBoundingClientRect().height || 0;
+      const max = Math.max(min, this.chat.clientHeight - header - overhead - 120);
+      const preferred = this.preferredReplyHeight;
+      let height;
+      if (typeof preferred === "number" && Number.isFinite(preferred)) height = preferred;
+      else {
+        reply.style.height = "auto";
+        height = Math.min(180, Math.max(104, reply.scrollHeight));
+      }
+      reply.style.height = `${Math.min(max, Math.max(min, height))}px`;
+      const splitter = composer.querySelector(".composer-splitter");
+      splitter?.setAttribute("aria-valuemin", `${Math.round(min)}`);
+      splitter?.setAttribute("aria-valuemax", `${Math.round(max)}`);
+      splitter?.setAttribute("aria-valuenow", `${Math.round(reply.getBoundingClientRect().height)}`);
+      splitter?.setAttribute("aria-valuetext", `输入框高度 ${Math.round(reply.getBoundingClientRect().height)} 像素`);
+    };
     saveDraft() {
       if (this.topic && this.reply) write(draftKey(this.user.user, this.topic.id), this.reply.value);
     }

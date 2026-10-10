@@ -200,6 +200,31 @@ test('新话题面板：预览、校验、失败草稿、成功跳转', async ({
   const fields = new URLSearchParams(state.writes[1].body); expect(fields.get('syntax')).toBe('markdown'); expect(fields.get('node_name')).toBe('create'); expect(fields.get('once')).toBe('54321');
 });
 
+test('原站 textarea 标题与长正文分别提交，不覆盖标题', async ({ page }) => {
+  const state = await setup(page);
+  await page.route('**/new', async route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({ contentType: 'text/html; charset=utf-8', body: newHTML().replace(
+      '<input id="topic_title" name="title">', '<textarea id="topic_title" name="title"></textarea>') });
+  });
+  await page.goto(origin);
+  await root(page).getByRole('button', { name: '发表新话题' }).click();
+  const dialog = root(page).getByRole('dialog');
+  const title = '【开源】微信主题来浏览V2EX';
+  const content = '这是微信主题的介绍，正文可以超过标题的长度限制。'.repeat(10);
+  await dialog.getByLabel('标题', { exact: true }).fill(title);
+  await dialog.getByLabel('节点', { exact: true }).fill('create');
+  await dialog.getByLabel('正文', { exact: true }).fill(content);
+  await dialog.getByRole('button', { name: '发表', exact: true }).click();
+  await expect(page).toHaveURL(`${origin}/t/7`);
+  expect(state.writes).toHaveLength(1);
+  const fields = new URLSearchParams(state.writes[0].body);
+  expect(fields.get('title')).toBe(title);
+  expect(fields.get('content')).toBe(content);
+  expect(fields.get('node_name')).toBe('create');
+  expect(fields.get('once')).toBe('54321');
+});
+
 test('V2EX_TAB Cookie 提供默认分类，URL 参数和原站标记优先', async ({ page }) => {
   await setup(page);
   await page.context().addCookies([{ name: 'V2EX_TAB', value: '2|1:0|10:1791614344|8:V2EX_TAB|12:Y3JlYXRpdmU=|83dc886f5e9a98f17259572e1de460c8a185645767a647778bb3f388d2b20d0b', url: origin }]);

@@ -3501,9 +3501,10 @@ svg { display: block; width: 24px; height: 24px; }
       if (el2 instanceof HTMLInputElement && ["checkbox", "radio"].includes(el2.type) && !el2.checked) return;
       fields[el2.name] = el2.value;
     });
-    const content = form.querySelector("textarea[name]");
+    const title = form.querySelector('#topic_title, input[name="title"], textarea[name="title"], input[name="topic_title"], textarea[name="topic_title"]');
+    const textareas = Array.from(form.querySelectorAll("textarea[name]")).filter((el2) => el2 !== title);
+    const content = textareas.find((el2) => el2.id === "topic_content" || ["content", "topic_content"].includes(el2.name)) || textareas[0];
     if (!content) throw new Error("未识别到编辑表单，请在原站完成此操作。");
-    const title = form.querySelector('#topic_title, input[name="title"], input[name="topic_title"]');
     const node = form.querySelector('[name="node_name"], [name="node"], #node_name');
     if (kind === "new" && !title) throw new Error("未识别到发帖标题字段，请在原站发帖。");
     const action2 = absolute(form.getAttribute("action") || base, base);

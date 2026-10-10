@@ -1,0 +1,33 @@
+{
+  "name": "v2ex-wechat-style",
+  "version": "1.0.0",
+  "private": true,
+  "description": "用微信三栏布局浏览 V2EX，支持回复、发帖、收藏和感谢",
+  "author": "y-not-u",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/y-not-u/V2EX-WeChat-Style.git"
+  },
+  "bugs": {
+    "url": "https://github.com/y-not-u/V2EX-WeChat-Style/issues"
+  },
+  "homepage": "https://github.com/y-not-u/V2EX-WeChat-Style#readme",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && playwright test",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "dompurify": "^3.3.0",
+    "marked": "^17.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.0"
+  }
+}

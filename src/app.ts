@@ -8,6 +8,7 @@ import { icon } from './icons';
 import type { Action, Message, NativeForm, Pagination, Session, Topic, TopicList } from './types';
 
 interface HistoryContext { v2wc: true; listURL: string; listScroll: number; chatScroll?: number }
+type FontSize = 'small' | 'medium' | 'large';
 const supportedList = (path: string) => path === '/' || /^\/go\/[^/]+\/?$/.test(path) || path === '/my/topics';
 export const supportedRoute = (path: string) => supportedList(path) || /^\/t\/\d+\/?$/.test(path);
 const homeTabs = ['技术', '创意', '好玩', 'Apple', '酷工作', '交易', '城市', '问与答', '最热', '全部'].map((label, i) => ({
@@ -40,6 +41,8 @@ export class ChatApp {
   private pending = new Set<string>();
   private reply?: HTMLTextAreaElement;
   private popup?: HTMLElement;
+  private settingsButton?: HTMLButtonElement;
+  private fontSize: FontSize = 'medium';
   private drawer?: HTMLElement;
   private modal?: HTMLElement;
   private toastNode?: HTMLElement;
@@ -53,6 +56,9 @@ export class ChatApp {
     const stored = read(`context:${this.user.user || 'guest'}`, '/?tab=all');
     this.listURL = 'items' in initial ? initial.url : this.validListURL(stored);
     this.host.id = 'v2wc-root';
+    const fontSize = read<string>('font-size', 'medium');
+    this.fontSize = fontSize === 'small' || fontSize === 'large' ? fontSize : 'medium';
+    this.host.dataset.fontSize = this.fontSize;
     const style = el('style'); style.textContent = styles;
     this.shadow.append(style, this.shell);
     this.shell.append(this.rail, this.listPanel, this.chat);
@@ -171,7 +177,13 @@ export class ChatApp {
   }
 
   private renderRail(): void {
+    this.closePopup();
     this.rail.replaceChildren(); this.rail.setAttribute('aria-label', '主导航');
+    const settings = this.settingsButton = button('更多设置', () => this.openSettings(), 'rail-button', 'menu');
+    settings.dataset.menu = 'true';
+    settings.setAttribute('aria-expanded', 'false');
+    settings.setAttribute('aria-controls', 'v2wc-settings');
+    settings.setAttribute('aria-haspopup', 'dialog');
     const brand = button('V2EX 首页', () => { this.closeDrawer(); void this.navigate('/?tab=all'); }, 'brand');
     const logo = el('img'); logo.src = `${location.origin}/static/icon-192.png`; logo.alt = 'V2EX'; brand.replaceChildren(logo);
     this.rail.append(brand,
@@ -180,7 +192,7 @@ export class ChatApp {
       button('分类和节点', () => void this.openNodes(), 'rail-button', 'compass'),
       button('我的收藏', () => { this.closeDrawer(); void this.navigate('/my/topics'); }, 'rail-button', 'star'),
       this.railLink('账号设置', '/settings', 'user'), el('div', 'rail-space'),
-      button('恢复原站界面', () => this.restore(), 'rail-button', 'exit'));
+      settings);
     const profile = this.railLink(this.user.user ? `个人资料：${this.user.user}` : '登录 V2EX', this.user.user ? `/member/${this.user.user}` : '/signin', 'user');
     profile.classList.add('rail-profile'); profile.replaceChildren(avatar(this.user.avatar, this.user.user || 'V'));
     this.rail.append(profile);
@@ -197,6 +209,26 @@ export class ChatApp {
   }
   private railLink(label: string, url: string, symbol: string): HTMLAnchorElement {
     const link = nativeLink('', url, 'rail-button'); link.title = label; link.setAttribute('aria-label', label); link.innerHTML = icon(symbol); return link;
+  }
+
+  private openSettings(): void {
+    if (this.popup?.classList.contains('settings-popup')) { this.closePopup(); return; }
+    this.closePopup();
+    const popup = this.popup = el('div', 'popup settings-popup');
+    popup.id = 'v2wc-settings'; popup.setAttribute('role', 'dialog'); popup.setAttribute('aria-label', '更多设置');
+    const sizes = el('div', 'font-size-options');
+    sizes.setAttribute('role', 'group'); sizes.setAttribute('aria-label', '字号');
+    for (const [value, label] of [['small', '小'], ['medium', '中'], ['large', '大']] as const) {
+      const control = button(label, () => {
+        this.fontSize = value; this.host.dataset.fontSize = value; write('font-size', value);
+        sizes.querySelectorAll('button').forEach(option => option.setAttribute('aria-pressed', String(option === control)));
+      });
+      control.setAttribute('aria-pressed', String(value === this.fontSize)); sizes.append(control);
+    }
+    popup.append(el('div', 'settings-label', '字号'), sizes, el('div', 'settings-divider'), button('恢复原站界面', () => this.restore()));
+    this.shell.append(popup);
+    this.settingsButton?.setAttribute('aria-expanded', 'true');
+    sizes.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus();
   }
 
   private applyList(list: TopicList): void {
@@ -463,8 +495,11 @@ export class ChatApp {
     this.chat.append(popup); popup.querySelector<HTMLButtonElement>('button')?.focus();
   }
   private closePopup(): void {
+    const restoreFocus = this.popup?.classList.contains('settings-popup') && this.popup.contains(this.shadow.activeElement);
     this.popup?.remove(); this.popup = undefined;
     this.chat.querySelector('.emoji-toggle')?.setAttribute('aria-expanded', 'false');
+    this.settingsButton?.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) this.settingsButton?.focus();
   }
   private closeDrawer(): void { this.drawer?.remove(); this.drawer = undefined; this.updateRailSelection(); }
 

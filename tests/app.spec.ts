@@ -495,11 +495,43 @@ test('HTML 清理移除脚本、事件、危险链接和样式冲突', async ({ 
 test('原站入口、窄屏回退、油猴启停', async ({ page }) => {
   await setup(page); await page.goto(`${origin}/t/1?v2wc=off`); await expect(root(page)).toHaveCount(0);
   await page.evaluate(() => (window as any).testMenus['启用微信聊天皮肤']()); await expect(root(page)).toBeVisible();
+  await root(page).getByRole('button', { name: '更多设置' }).click();
   await root(page).getByRole('button', { name: '恢复原站界面' }).click();
   await expect(root(page)).toHaveCount(0); await expect(page).toHaveURL(/v2wc=off/);
   await page.evaluate(() => (window as any).testMenus['启用微信聊天皮肤']()); await expect(root(page)).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 }); await expect(root(page)).toHaveCount(0);
   await expect(page.locator('#Main')).toBeVisible();
+});
+
+test('左下角字号设置立即生效、保持固定大小并记住选择', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await setup(page); await page.goto(`${origin}/t/1`);
+  await expect(page).toHaveTitle('V2EX');
+  const body = root(page).locator('.bubble-body').first();
+  await expect(body).toHaveCSS('font-size', '16px');
+  const toggle = root(page).getByRole('button', { name: '更多设置' });
+  await toggle.click();
+  const settings = root(page).getByRole('dialog', { name: '更多设置' });
+  await expect(settings.getByRole('button', { name: '中', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  for (const [label, size] of [['小', '14px'], ['中', '16px'], ['大', '18px']]) {
+    await settings.getByRole('button', { name: label, exact: true }).click();
+    await expect(body).toHaveCSS('font-size', size);
+    await expect(settings.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-pressed', 'true');
+  }
+  await page.setViewportSize({ width: 2048, height: 1033 });
+  await expect(body).toHaveCSS('font-size', '18px');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(body).toHaveCSS('font-size', '18px');
+  await page.screenshot({ path: '/tmp/v2ex-font-settings.png' });
+  await page.keyboard.press('Escape');
+  await expect(settings).toHaveCount(0); await expect(toggle).toBeFocused();
+  await page.reload();
+  await expect(body).toHaveCSS('font-size', '18px');
+  await toggle.click();
+  await expect(settings.getByRole('button', { name: '大', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await root(page).locator('.chat-head').click();
+  await expect(settings).toHaveCount(0); await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(errors).toEqual([]);
 });
 
 test('内容内的 V2EX 链接局部导航，外链仍在新标签打开', async ({ page }) => {

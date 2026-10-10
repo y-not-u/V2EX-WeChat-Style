@@ -1232,10 +1232,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
   --text: #191919; --muted: #999; --line: #dcdcdc; --selected: #ddd;
   --green: #95ec69; --accent: #07c160; --link: #5e709b;
   --nav-width: clamp(64px, 3.91vw, 80px); --list-width: clamp(320px, 20vw, 410px);
-  --header-height: clamp(72px, 4.3vw, 88px); --body-size: clamp(16px, 1vw, 20px);
+  --header-height: clamp(72px, 4.3vw, 88px); --body-size: 16px;
   color: var(--text); font: 400 var(--body-size)/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "WenQuanYi Zen Hei", sans-serif;
   color-scheme: light;
 }
+:host([data-font-size="small"]) { --body-size: 14px; }
+:host([data-font-size="large"]) { --body-size: 18px; }
 * { box-sizing: border-box; }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; border: 0; background: none; padding: 0; }
@@ -1263,7 +1265,7 @@ svg { display: block; width: 24px; height: 24px; }
 .panel-splitter:focus-visible { outline: none; }
 .resizing-panels, .resizing-panels * { cursor: col-resize !important; user-select: none !important; }
 .list-head { height: var(--header-height); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
-.list-head h1 { margin: 0; font-size: clamp(22px, 1.35vw, 28px); font-weight: 600; letter-spacing: .3px; }
+.list-head h1 { margin: 0; font-size: calc(var(--body-size) + 6px); font-weight: 600; letter-spacing: .3px; }
 .add { position: absolute; right: 20px; color: #252525; padding: 4px; }
 .add svg { width: 32px; height: 32px; }
 .search-wrap { margin: 0 16px 14px; position: relative; }
@@ -1286,7 +1288,7 @@ svg { display: block; width: 24px; height: 24px; }
 .row-top { display: flex; align-items: baseline; gap: 9px; }
 .row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-weight: 400; }
 .row-time { flex-shrink: 0; font-size: 12px; color: #999; max-width: 65px; overflow: hidden; white-space: nowrap; }
-.row-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: clamp(14px, .88vw, 18px); margin-top: 4px; }
+.row-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: calc(var(--body-size) - 2px); margin-top: 4px; }
 .pagination { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 9px 14px; font-size: 12px; color: #888; flex-shrink: 0; }
 .pagination button { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 3px; }
 .pagination button:hover:not(:disabled) { background: #ddd; }
@@ -1294,8 +1296,8 @@ svg { display: block; width: 24px; height: 24px; }
 .chat-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
 .chat-head { min-height: var(--header-height); background: var(--header); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 28px; flex-shrink: 0; }
 .chat-heading { min-width: 0; }
-.chat-title { font-size: clamp(19px, 1.13vw, 23px); font-weight: 600; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
-.chat-subtitle { color: var(--muted); margin-top: 3px; font-size: clamp(13px, .78vw, 16px); }
+.chat-title { font-size: calc(var(--body-size) + 3px); font-weight: 600; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+.chat-subtitle { color: var(--muted); margin-top: 3px; font-size: calc(var(--body-size) - 3px); }
 .chat-subtitle a { color: inherit; }
 .head-actions { display: flex; gap: 12px; align-items: center; }
 .icon-button { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 4px; }
@@ -1305,7 +1307,7 @@ svg { display: block; width: 24px; height: 24px; }
 .message .avatar { width: clamp(44px, 2.7vw, 55px); height: clamp(44px, 2.7vw, 55px); }
 .message-content { min-width: 0; max-width: min(82%, 920px); position: relative; }
 .original .message-content { max-width: min(82%, 766px); }
-.message-meta { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: clamp(12px, .82vw, 16px); margin: -2px 0 4px; min-height: 20px; }
+.message-meta { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: calc(var(--body-size) - 2px); margin: -2px 0 4px; min-height: 20px; }
 .message-user { color: var(--muted); text-align: left; }
 .message-user:hover { color: var(--link); }
 .message-time { font-size: 11px; opacity: 0; transition: opacity .12s; }
@@ -1331,7 +1333,7 @@ svg { display: block; width: 24px; height: 24px; }
 .bubble-body h1, .bubble-body h2, .bubble-body h3 { font-size: 1.2em; margin: 16px 0 10px; }
 .bubble-body > :first-child { margin-top: 0; }
 .bubble-body ul, .bubble-body ol { padding-left: 1.5em; }
-.bubble-body pre { max-width: 100%; overflow-x: auto; background: #f5f5f5; padding: 12px; border-radius: 3px; font-size: 13px; line-height: 1.65; }
+.bubble-body pre { max-width: 100%; overflow-x: auto; background: #f5f5f5; padding: 12px; border-radius: 3px; font-size: 1em; line-height: 1.65; }
 .bubble-body code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .87em; }
 .bubble-body :not(pre) > code { background: #f2f2f2; padding: 2px 4px; border-radius: 2px; }
 .table-scroll { overflow-x: auto; max-width: 100%; }
@@ -1369,6 +1371,12 @@ svg { display: block; width: 24px; height: 24px; }
 .popup { position: absolute; top: 65px; right: 20px; z-index: 12; min-width: 160px; background: #fff; border-radius: 4px; padding: 6px; box-shadow: 0 3px 20px #0002; border: 1px solid #ddd; }
 .popup button, .popup a { display: block; width: 100%; padding: 10px 14px; text-align: left; font-size: 14px; color: #333; border-radius: 3px; }
 .popup button:hover, .popup a:hover { background: #f1f1f1; text-decoration: none; }
+.settings-popup { top: auto; right: auto; left: calc(var(--nav-width) + 8px); bottom: 76px; width: 220px; }
+.settings-label { padding: 10px 14px 6px; font-size: 14px; color: #777; }
+.font-size-options { display: flex; gap: 6px; padding: 4px 10px 10px; }
+.font-size-options button { flex: 1; padding: 8px 0; text-align: center; border-radius: 4px; background: #f3f3f3; }
+.font-size-options button[aria-pressed="true"] { background: #e2efdf; color: #078535; font-weight: 600; }
+.settings-divider { height: 1px; margin: 0 8px 4px; background: #eee; }
 .drawer { position: absolute; left: var(--nav-width); top: 0; bottom: 0; width: var(--list-width); background: #f5f5f5; z-index: 14; box-shadow: 4px 0 18px #0001; display: flex; flex-direction: column; border-right: 1px solid #ddd; }
 .drawer-head { height: var(--header-height); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #ddd; }
 .drawer-head h2 { font-size: 20px; font-weight: 500; }
@@ -3763,6 +3771,7 @@ svg { display: block; width: 24px; height: 24px; }
   // src/icons.ts
   var paths = {
     smile: '<circle cx="12" cy="12" r="9"/><path d="M8 14a4 4 0 0 0 8 0Z"/><path d="M8 9h.01M16 9h.01" stroke-width="3"/>',
+    menu: '<path d="M5 6h14M5 12h14M5 18h14"/>',
     chat: '<path d="M20 11.5a8 8 0 0 1-8 8 9 9 0 0 1-3-.5L4 21l1.4-4.6A8 8 0 1 1 20 11.5Z"/>',
     bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
     compass: '<circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/>',
@@ -3841,6 +3850,9 @@ svg { display: block; width: 24px; height: 24px; }
       const stored = read(`context:${this.user.user || "guest"}`, "/?tab=all");
       this.listURL = "items" in initial ? initial.url : this.validListURL(stored);
       this.host.id = "v2wc-root";
+      const fontSize = read("font-size", "medium");
+      this.fontSize = fontSize === "small" || fontSize === "large" ? fontSize : "medium";
+      this.host.dataset.fontSize = this.fontSize;
       const style = el("style");
       style.textContent = style_default;
       this.shadow.append(style, this.shell);
@@ -3884,6 +3896,8 @@ svg { display: block; width: 24px; height: 24px; }
     pending = /* @__PURE__ */ new Set();
     reply;
     popup;
+    settingsButton;
+    fontSize = "medium";
     drawer;
     modal;
     toastNode;
@@ -4013,8 +4027,14 @@ svg { display: block; width: 24px; height: 24px; }
       this.listPanel.append(head, searchWrap, contextRow, this.topics, this.listPages);
     }
     renderRail() {
+      this.closePopup();
       this.rail.replaceChildren();
       this.rail.setAttribute("aria-label", "主导航");
+      const settings = this.settingsButton = button("更多设置", () => this.openSettings(), "rail-button", "menu");
+      settings.dataset.menu = "true";
+      settings.setAttribute("aria-expanded", "false");
+      settings.setAttribute("aria-controls", "v2wc-settings");
+      settings.setAttribute("aria-haspopup", "dialog");
       const brand = button("V2EX 首页", () => {
         this.closeDrawer();
         void this.navigate("/?tab=all");
@@ -4037,7 +4057,7 @@ svg { display: block; width: 24px; height: 24px; }
         }, "rail-button", "star"),
         this.railLink("账号设置", "/settings", "user"),
         el("div", "rail-space"),
-        button("恢复原站界面", () => this.restore(), "rail-button", "exit")
+        settings
       );
       const profile = this.railLink(this.user.user ? `个人资料：${this.user.user}` : "登录 V2EX", this.user.user ? `/member/${this.user.user}` : "/signin", "user");
       profile.classList.add("rail-profile");
@@ -4060,6 +4080,34 @@ svg { display: block; width: 24px; height: 24px; }
       link.setAttribute("aria-label", label);
       link.innerHTML = icon(symbol);
       return link;
+    }
+    openSettings() {
+      if (this.popup?.classList.contains("settings-popup")) {
+        this.closePopup();
+        return;
+      }
+      this.closePopup();
+      const popup = this.popup = el("div", "popup settings-popup");
+      popup.id = "v2wc-settings";
+      popup.setAttribute("role", "dialog");
+      popup.setAttribute("aria-label", "更多设置");
+      const sizes = el("div", "font-size-options");
+      sizes.setAttribute("role", "group");
+      sizes.setAttribute("aria-label", "字号");
+      for (const [value, label] of [["small", "小"], ["medium", "中"], ["large", "大"]]) {
+        const control = button(label, () => {
+          this.fontSize = value;
+          this.host.dataset.fontSize = value;
+          write("font-size", value);
+          sizes.querySelectorAll("button").forEach((option) => option.setAttribute("aria-pressed", String(option === control)));
+        });
+        control.setAttribute("aria-pressed", String(value === this.fontSize));
+        sizes.append(control);
+      }
+      popup.append(el("div", "settings-label", "字号"), sizes, el("div", "settings-divider"), button("恢复原站界面", () => this.restore()));
+      this.shell.append(popup);
+      this.settingsButton?.setAttribute("aria-expanded", "true");
+      sizes.querySelector('[aria-pressed="true"]')?.focus();
     }
     applyList(list) {
       this.list = list;
@@ -4468,9 +4516,12 @@ svg { display: block; width: 24px; height: 24px; }
       popup.querySelector("button")?.focus();
     }
     closePopup() {
+      const restoreFocus = this.popup?.classList.contains("settings-popup") && this.popup.contains(this.shadow.activeElement);
       this.popup?.remove();
       this.popup = void 0;
       this.chat.querySelector(".emoji-toggle")?.setAttribute("aria-expanded", "false");
+      this.settingsButton?.setAttribute("aria-expanded", "false");
+      if (restoreFocus) this.settingsButton?.focus();
     }
     closeDrawer() {
       this.drawer?.remove();

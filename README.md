@@ -58,11 +58,14 @@ npm run check       # 类型检查 + Playwright 自动化测试
 在 `main` 分支提交功能修改、确保工作区干净后，执行：
 
 ```bash
-npm version patch   # 例如 1.0.0 → 1.0.1；新功能用 minor，重大变更用 major
-git push origin main --follow-tags
+npm run release            # 补丁版本，例如 1.0.0 → 1.0.1
+npm run release -- minor   # 新功能版本，例如 1.0.1 → 1.1.0
+npm run release -- major   # 重大变更，例如 1.1.0 → 2.0.0
 ```
 
-`npm version` 会先运行类型检查和自动化测试，通过后同步更新 `package.json`、`package-lock.json`，重新构建脚本，并将这些文件一起提交、创建版本标签。推送成功后，开启自动更新的油猴会在下次检查时发现更高版本并下载更新；也可以在油猴管理面板手动检查更新。
+`npm run release` 会检查当前分支为 `main`、工作区干净且配置了 `origin` 远程，然后调用 `npm version`：先运行类型检查和自动化测试，通过后同步更新 `package.json`、`package-lock.json`，重新构建脚本，并将这些文件一起提交、创建版本标签，最后自动推送到 `origin/main`。推送成功后，开启自动更新的油猴会在下次检查时发现更高版本并下载更新；也可以在油猴管理面板手动检查更新。
+
+如果版本提交和标签已生成，但推送失败，修复网络或权限问题后执行 `git push origin main --follow-tags` 重试即可，避免再次运行发布命令而重复升版本。也可以继续手动使用 `npm version patch`，再自行推送。
 
 仅推送源码或创建 GitHub Release 不会改变脚本版本。每次发布都需要提高版本号并推送生成的脚本。检查更新还需要用户能够访问 `raw.githubusercontent.com`。
 

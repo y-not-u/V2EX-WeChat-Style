@@ -529,7 +529,8 @@ export class ChatApp {
   private errorText(error: unknown): string { return error instanceof Error ? error.message : '操作失败，请查看原页面。'; }
   private toast(message: string, url?: string, persistent = false): void {
     this.toastNode?.remove(); clearTimeout(this.toastTimer);
-    const node = this.toastNode = el('div', 'toast', message); node.setAttribute('role', 'status'); node.setAttribute('aria-live', 'polite');
+    const node = this.toastNode = el('div', 'toast'); node.setAttribute('role', 'status'); node.setAttribute('aria-live', 'polite');
+    node.append(el('span', 'toast-message', message));
     if (url) node.append(nativeLink('查看原页面', url));
     node.append(button('关闭提示', () => node.remove(), 'icon-button', 'close'));
     this.chat.append(node); if (!persistent) this.toastTimer = setTimeout(() => node.remove(), 4500);

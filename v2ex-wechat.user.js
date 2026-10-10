@@ -1310,6 +1310,7 @@ svg { display: block; width: 24px; height: 24px; }
 .bubble-body { position: relative; min-width: 0; }
 .own { flex-direction: row-reverse; }
 .own .message-meta { justify-content: flex-end; }
+.own .message-time { order: -1; }
 .own .bubble { background: var(--green); }
 .own .bubble::before { left: auto; right: -6px; }
 .message-actions { position: absolute; left: 0; top: 100%; display: flex; align-items: center; gap: 12px; margin-top: 4px; min-height: 18px; font-size: 11px; color: #999; opacity: 0; }
@@ -1348,8 +1349,12 @@ svg { display: block; width: 24px; height: 24px; }
 .empty .empty-brand { font-size: 26px; color: #aaa; font-weight: 500; }
 .list-empty { padding: 35px 20px; text-align: center; font-size: 14px; color: #999; }
 .loading { font-size: 13px; color: #999; padding: 24px; text-align: center; }
-.toast { position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; border-radius: 5px; padding: 12px 18px; max-width: 80%; font-size: 14px; z-index: 20; box-shadow: 0 3px 14px #0002; }
-.toast a { color: #95ec69; margin-left: 12px; white-space: nowrap; }
+.toast { position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; width: max-content; background: #333; color: #fff; border-radius: 5px; padding: 10px 14px; max-width: 80%; font-size: 14px; z-index: 20; box-shadow: 0 3px 14px #0002; }
+.toast-message { min-width: 0; overflow-wrap: anywhere; }
+.toast a { color: #95ec69; white-space: nowrap; flex-shrink: 0; }
+.toast .icon-button { width: 24px; height: 24px; flex-shrink: 0; }
+.toast .icon-button svg { width: 18px; height: 18px; }
+.toast .icon-button:hover { background: #ffffff1a; }
 .popup { position: absolute; top: 65px; right: 20px; z-index: 12; min-width: 160px; background: #fff; border-radius: 4px; padding: 6px; box-shadow: 0 3px 20px #0002; border: 1px solid #ddd; }
 .popup button, .popup a { display: block; width: 100%; padding: 10px 14px; text-align: left; font-size: 14px; color: #333; border-radius: 3px; }
 .popup button:hover, .popup a:hover { background: #f1f1f1; text-decoration: none; }
@@ -4553,9 +4558,10 @@ svg { display: block; width: 24px; height: 24px; }
     toast(message, url, persistent = false) {
       this.toastNode?.remove();
       clearTimeout(this.toastTimer);
-      const node = this.toastNode = el("div", "toast", message);
+      const node = this.toastNode = el("div", "toast");
       node.setAttribute("role", "status");
       node.setAttribute("aria-live", "polite");
+      node.append(el("span", "toast-message", message));
       if (url) node.append(nativeLink("查看原页面", url));
       node.append(button("关闭提示", () => node.remove(), "icon-button", "close"));
       this.chat.append(node);

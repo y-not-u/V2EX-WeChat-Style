@@ -82,6 +82,18 @@ test('三栏、列表筛选、正文、附言、气泡与历史导航', async ({
   await openTopic(page); await expect(page).toHaveURL(`${origin}/t/1`);
   await expect(root(page).locator('.message')).toHaveCount(6);
   await expect(root(page).locator('.own .bubble')).toHaveCSS('background-color', 'rgb(149, 236, 105)');
+  const own = root(page).locator('.own').first();
+  const name = own.locator('.message-user');
+  const time = own.locator('.message-time');
+  const nameBox = await name.boundingBox();
+  const timeBox = await time.boundingBox();
+  const metaBox = await own.locator('.message-meta').boundingBox();
+  expect(nameBox).not.toBeNull(); expect(timeBox).not.toBeNull(); expect(metaBox).not.toBeNull();
+  expect(timeBox!.x + timeBox!.width).toBeLessThanOrEqual(nameBox!.x);
+  expect(Math.abs(nameBox!.x + nameBox!.width - metaBox!.x - metaBox!.width)).toBeLessThan(2);
+  await own.hover(); await expect(time).toHaveCSS('opacity', '1');
+  expect((await name.boundingBox())!.x).toBe(nameBox!.x);
+  await page.screenshot({ path: '/tmp/v2ex-own-message-meta-fixed.png' });
   await expect(root(page).getByText('补充：支持 Ctrl+Enter 发送回复。')).toBeVisible();
   await root(page).locator('[data-topic-id="2"]').click(); await expect(chatTitle(page)).toHaveText(titles[1]);
   await page.goBack(); await expect(chatTitle(page)).toHaveText(titles[0]);
@@ -155,6 +167,15 @@ test('重复发送被阻止', async ({ page }) => {
   const input = root(page).getByRole('textbox', { name: '回复内容' }); await input.fill('只发送一次');
   await input.press('Control+Enter'); await page.keyboard.press('Control+Enter');
   await expect(root(page).getByText('回复已发送')).toBeVisible(); expect(state.writes).toHaveLength(1);
+  const toast = root(page).getByRole('status');
+  const messageBox = await toast.locator('.toast-message').boundingBox();
+  const close = toast.getByRole('button', { name: '关闭提示' });
+  const closeBox = await close.boundingBox();
+  expect(messageBox).not.toBeNull(); expect(closeBox).not.toBeNull();
+  expect(closeBox!.x).toBeGreaterThanOrEqual(messageBox!.x + messageBox!.width);
+  expect(Math.abs(closeBox!.y + closeBox!.height / 2 - messageBox!.y - messageBox!.height / 2)).toBeLessThan(2);
+  await page.screenshot({ path: '/tmp/v2ex-toast-fixed.png' });
+  await close.click(); await expect(toast).toHaveCount(0);
 });
 
 test('收藏、取消收藏、感谢确认与令牌刷新', async ({ page }) => {

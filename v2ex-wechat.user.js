@@ -1256,7 +1256,12 @@ svg { display: block; width: 24px; height: 24px; }
 .rail-space { flex: 1; }
 .rail-profile { margin-top: 2px; }
 .rail-profile .avatar { width: 42px; height: 42px; border-radius: 50%; background: #191919; color: #eee; }
-.list-panel { background: var(--list); border-right: 1px solid var(--line); min-height: 0; display: flex; flex-direction: column; position: relative; }
+.list-panel { background: var(--list); border-right: 1px solid var(--line); min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
+.panel-splitter { position: absolute; top: 0; bottom: 0; right: -5px; width: 10px; z-index: 5; cursor: col-resize; touch-action: none; }
+.panel-splitter::after { content: ''; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: transparent; transition: background .12s; }
+.panel-splitter:hover::after, .panel-splitter:focus-visible::after, .resizing-panels .panel-splitter::after { background: var(--accent); }
+.panel-splitter:focus-visible { outline: none; }
+.resizing-panels, .resizing-panels * { cursor: col-resize !important; user-select: none !important; }
 .list-head { height: var(--header-height); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
 .list-head h1 { margin: 0; font-size: clamp(22px, 1.35vw, 28px); font-weight: 600; letter-spacing: .3px; }
 .add { position: absolute; right: 20px; color: #252525; padding: 4px; }
@@ -3760,6 +3765,7 @@ svg { display: block; width: 24px; height: 24px; }
       this.listPanel.setAttribute("aria-label", "话题列表");
       this.chat.setAttribute("aria-label", "话题聊天");
       this.buildListPanel();
+      this.buildSplitter();
       this.renderRail();
       if ("items" in initial) {
         this.applyList(initial);
@@ -3779,6 +3785,9 @@ svg { display: block; width: 24px; height: 24px; }
     context = el("span", "context-title");
     search = el("input", "search");
     chat = el("section", "chat-panel");
+    splitter = el("div", "panel-splitter");
+    preferredListWidth = read("layout:list-width", null);
+    resizePointer;
     chatScroll = el("div", "chat-scroll");
     rail = el("nav", "rail");
     list;
@@ -3801,6 +3810,8 @@ svg { display: block; width: 24px; height: 24px; }
     refreshListButton = button("刷新话题列表", () => void this.loadList(this.listURL), "mini", "refresh");
     mount() {
       document.body.append(this.host);
+      this.updatePanelWidth();
+      window.addEventListener("resize", this.updatePanelWidth);
       history.replaceState(this.historyContext(), "", location.href);
       window.addEventListener("popstate", this.onPopState);
       window.addEventListener("hashchange", this.onHashChange);
@@ -3819,9 +3830,72 @@ svg { display: block; width: 24px; height: 24px; }
       this.listRequest?.abort();
       clearTimeout(this.toastTimer);
       clearTimeout(this.scrollTimer);
+      window.removeEventListener("resize", this.updatePanelWidth);
       window.removeEventListener("popstate", this.onPopState);
       window.removeEventListener("hashchange", this.onHashChange);
       this.host.remove();
+    }
+    updatePanelWidth = () => {
+      const available = this.shell.clientWidth - this.rail.getBoundingClientRect().width;
+      const max = Math.max(240, available - 420);
+      const fallback = Math.min(410, Math.max(320, this.shell.clientWidth * 0.2));
+      const preferred = typeof this.preferredListWidth === "number" && Number.isFinite(this.preferredListWidth) ? this.preferredListWidth : fallback;
+      const width = Math.min(max, Math.max(240, preferred));
+      this.shell.style.setProperty("--list-width", `${width}px`);
+      this.splitter.setAttribute("aria-valuemin", "420");
+      this.splitter.setAttribute("aria-valuemax", `${Math.round(available - 240)}`);
+      this.splitter.setAttribute("aria-valuenow", `${Math.round(available - width)}`);
+      this.splitter.setAttribute("aria-valuetext", `内容详情区宽度 ${Math.round(available - width)} 像素`);
+    };
+    buildSplitter() {
+      this.splitter.tabIndex = 0;
+      this.splitter.setAttribute("role", "separator");
+      this.splitter.setAttribute("aria-orientation", "vertical");
+      this.splitter.setAttribute("aria-label", "调整内容详情区宽度");
+      this.splitter.title = "左右拖动调整详情宽度，双击恢复默认；也可使用左右方向键";
+      const setWidth = (width) => {
+        this.preferredListWidth = width;
+        this.updatePanelWidth();
+        this.preferredListWidth = this.listPanel.getBoundingClientRect().width;
+      };
+      const reset = () => {
+        this.preferredListWidth = null;
+        write("layout:list-width", null);
+        this.updatePanelWidth();
+      };
+      this.splitter.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0 || this.resizePointer) return;
+        event.preventDefault();
+        this.splitter.focus();
+        this.resizePointer = { id: event.pointerId, x: event.clientX, width: this.listPanel.getBoundingClientRect().width };
+        this.splitter.setPointerCapture(event.pointerId);
+        this.shell.classList.add("resizing-panels");
+      });
+      this.splitter.addEventListener("pointermove", (event) => {
+        if (this.resizePointer?.id === event.pointerId) setWidth(this.resizePointer.width + event.clientX - this.resizePointer.x);
+      });
+      const finish = (event) => {
+        if (this.resizePointer?.id !== event.pointerId) return;
+        this.resizePointer = void 0;
+        this.shell.classList.remove("resizing-panels");
+        if (this.splitter.hasPointerCapture(event.pointerId)) this.splitter.releasePointerCapture(event.pointerId);
+        write("layout:list-width", this.preferredListWidth);
+      };
+      this.splitter.addEventListener("pointerup", finish);
+      this.splitter.addEventListener("pointercancel", finish);
+      this.splitter.addEventListener("lostpointercapture", finish);
+      this.splitter.addEventListener("dblclick", reset);
+      this.splitter.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          reset();
+        }
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        setWidth(this.listPanel.getBoundingClientRect().width + (event.key === "ArrowRight" ? 24 : -24));
+        write("layout:list-width", this.preferredListWidth);
+      });
+      this.listPanel.append(this.splitter);
     }
     validListURL(input) {
       try {

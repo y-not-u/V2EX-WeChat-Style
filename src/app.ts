@@ -24,6 +24,9 @@ export class ChatApp {
   private context = el('span', 'context-title');
   private search = el('input', 'search');
   private chat = el('section', 'chat-panel');
+  private splitter = el('div', 'panel-splitter');
+  private preferredListWidth = read<number | null>('layout:list-width', null);
+  private resizePointer?: { id: number; x: number; width: number };
   private chatScroll = el('div', 'chat-scroll');
   private rail = el('nav', 'rail');
   private list?: TopicList;
@@ -55,13 +58,15 @@ export class ChatApp {
     this.shell.append(this.rail, this.listPanel, this.chat);
     this.listPanel.setAttribute('aria-label', '话题列表');
     this.chat.setAttribute('aria-label', '话题聊天');
-    this.buildListPanel(); this.renderRail();
+    this.buildListPanel(); this.buildSplitter(); this.renderRail();
     if ('items' in initial) { this.applyList(initial); this.renderEmpty(); }
     else { this.topic = initial; this.renderTopic(initial); }
   }
 
   mount(): void {
     document.body.append(this.host);
+    this.updatePanelWidth();
+    window.addEventListener('resize', this.updatePanelWidth);
     history.replaceState(this.historyContext(), '', location.href);
     window.addEventListener('popstate', this.onPopState);
     window.addEventListener('hashchange', this.onHashChange);
@@ -79,8 +84,70 @@ export class ChatApp {
     this.disposed = true; this.topicRequest?.abort(); this.listRequest?.abort();
     clearTimeout(this.toastTimer);
     clearTimeout(this.scrollTimer);
+    window.removeEventListener('resize', this.updatePanelWidth);
     window.removeEventListener('popstate', this.onPopState); window.removeEventListener('hashchange', this.onHashChange);
     this.host.remove();
+  }
+
+  private updatePanelWidth = (): void => {
+    const available = this.shell.clientWidth - this.rail.getBoundingClientRect().width;
+    const max = Math.max(240, available - 420);
+    const fallback = Math.min(410, Math.max(320, this.shell.clientWidth * .2));
+    const preferred = typeof this.preferredListWidth === 'number' && Number.isFinite(this.preferredListWidth) ? this.preferredListWidth : fallback;
+    const width = Math.min(max, Math.max(240, preferred));
+    this.shell.style.setProperty('--list-width', `${width}px`);
+    this.splitter.setAttribute('aria-valuemin', '420');
+    this.splitter.setAttribute('aria-valuemax', `${Math.round(available - 240)}`);
+    this.splitter.setAttribute('aria-valuenow', `${Math.round(available - width)}`);
+    this.splitter.setAttribute('aria-valuetext', `内容详情区宽度 ${Math.round(available - width)} 像素`);
+  };
+
+  private buildSplitter(): void {
+    this.splitter.tabIndex = 0;
+    this.splitter.setAttribute('role', 'separator');
+    this.splitter.setAttribute('aria-orientation', 'vertical');
+    this.splitter.setAttribute('aria-label', '调整内容详情区宽度');
+    this.splitter.title = '左右拖动调整详情宽度，双击恢复默认；也可使用左右方向键';
+    const setWidth = (width: number) => {
+      this.preferredListWidth = width;
+      this.updatePanelWidth();
+      this.preferredListWidth = this.listPanel.getBoundingClientRect().width;
+    };
+    const reset = () => {
+      this.preferredListWidth = null;
+      write('layout:list-width', null);
+      this.updatePanelWidth();
+    };
+    this.splitter.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || this.resizePointer) return;
+      event.preventDefault();
+      this.splitter.focus();
+      this.resizePointer = { id: event.pointerId, x: event.clientX, width: this.listPanel.getBoundingClientRect().width };
+      this.splitter.setPointerCapture(event.pointerId);
+      this.shell.classList.add('resizing-panels');
+    });
+    this.splitter.addEventListener('pointermove', event => {
+      if (this.resizePointer?.id === event.pointerId) setWidth(this.resizePointer.width + event.clientX - this.resizePointer.x);
+    });
+    const finish = (event: PointerEvent) => {
+      if (this.resizePointer?.id !== event.pointerId) return;
+      this.resizePointer = undefined;
+      this.shell.classList.remove('resizing-panels');
+      if (this.splitter.hasPointerCapture(event.pointerId)) this.splitter.releasePointerCapture(event.pointerId);
+      write('layout:list-width', this.preferredListWidth);
+    };
+    this.splitter.addEventListener('pointerup', finish);
+    this.splitter.addEventListener('pointercancel', finish);
+    this.splitter.addEventListener('lostpointercapture', finish);
+    this.splitter.addEventListener('dblclick', reset);
+    this.splitter.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); reset(); }
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      setWidth(this.listPanel.getBoundingClientRect().width + (event.key === 'ArrowRight' ? 24 : -24));
+      write('layout:list-width', this.preferredListWidth);
+    });
+    this.listPanel.append(this.splitter);
   }
 
   private validListURL(input: string): string {

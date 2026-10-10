@@ -328,6 +328,49 @@ test('内容内的 V2EX 链接局部导航，外链仍在新标签打开', async
   await expect(root(page).getByRole('link', { name: '外部链接', exact: true })).toHaveAttribute('target', '_blank');
 });
 
+test('详情宽度可拖动、键盘调整、记忆并恢复默认，窗口缩小时不溢出', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });
+  await setup(page); await page.goto(`${origin}/t/1`);
+  await expect(chatTitle(page)).toHaveText(titles[0]);
+  const splitter = root(page).getByRole('separator', { name: '调整内容详情区宽度' });
+  const list = root(page).locator('.list-panel');
+  const chat = root(page).locator('.chat-panel');
+  const width = async () => (await chat.boundingBox())!.width;
+  const drag = async (delta: number) => {
+    const box = (await splitter.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, 300);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + delta, 300, { steps: 10 });
+    await page.mouse.up();
+  };
+  const initial = await width();
+  await drag(200);
+  expect(await width()).toBe(initial - 200);
+  await expect(root(page).locator('.app')).not.toHaveClass(/resizing-panels/);
+  await page.reload(); await expect(chatTitle(page)).toHaveText(titles[0]);
+  expect(await width()).toBe(initial - 200);
+  await drag(-100);
+  expect(await width()).toBe(initial - 100);
+  await splitter.press('ArrowLeft');
+  expect(await width()).toBe(initial - 76);
+  await page.screenshot({ path: '/tmp/v2ex-resizable-detail.png' });
+  await drag(2000);
+  expect(await width()).toBe(420);
+  await page.setViewportSize({ width: 1024, height: 900 });
+  expect(await width()).toBe(420);
+  expect((await chat.boundingBox())!.x + await width()).toBe(1024);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await drag(-2000);
+  expect((await list.boundingBox())!.width).toBe(240);
+  await splitter.dblclick();
+  expect(await width()).toBe(initial);
+  await page.reload(); await expect(chatTitle(page)).toHaveText(titles[0]);
+  expect(await width()).toBe(initial);
+  expect(errors).toEqual([]);
+});
+
 for (const width of [1280, 1440, 2048]) test(`桌面 ${width}px：布局无溢出，正文和列表独立滚动`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1033 }); await setup(page); await page.goto(`${origin}/t/1`);
   await expect(root(page).locator('.topic-row')).toHaveCount(6);

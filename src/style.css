@@ -27,7 +27,12 @@ svg { display: block; width: 24px; height: 24px; }
 .rail-space { flex: 1; }
 .rail-profile { margin-top: 2px; }
 .rail-profile .avatar { width: 42px; height: 42px; border-radius: 50%; background: #191919; color: #eee; }
-.list-panel { background: var(--list); border-right: 1px solid var(--line); min-height: 0; display: flex; flex-direction: column; position: relative; }
+.list-panel { background: var(--list); border-right: 1px solid var(--line); min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
+.panel-splitter { position: absolute; top: 0; bottom: 0; right: -5px; width: 10px; z-index: 5; cursor: col-resize; touch-action: none; }
+.panel-splitter::after { content: ''; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: transparent; transition: background .12s; }
+.panel-splitter:hover::after, .panel-splitter:focus-visible::after, .resizing-panels .panel-splitter::after { background: var(--accent); }
+.panel-splitter:focus-visible { outline: none; }
+.resizing-panels, .resizing-panels * { cursor: col-resize !important; user-select: none !important; }
 .list-head { height: var(--header-height); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
 .list-head h1 { margin: 0; font-size: clamp(22px, 1.35vw, 28px); font-weight: 600; letter-spacing: .3px; }
 .add { position: absolute; right: 20px; color: #252525; padding: 4px; }

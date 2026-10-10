@@ -8,6 +8,14 @@
 
 ---
 
+## 🖼️ 效果截图
+
+![V2EX 微信聊天皮肤：桌面端三栏布局、话题列表与正文气泡](./docs/images/preview.png)
+
+*实际使用截图，展示桌面端三栏布局、话题列表与正文气泡。*
+
+---
+
 ## 🚀 安装
 
 1. 安装浏览器扩展 [Tampermonkey (油猴)](https://www.tampermonkey.net/)。

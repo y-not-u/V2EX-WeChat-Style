@@ -1236,6 +1236,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
   color: var(--text); font: 400 var(--body-size)/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "WenQuanYi Zen Hei", sans-serif;
   color-scheme: light;
 }
+:host([data-theme="dark"]) {
+  --rail: #181818; --list: #242424; --canvas: #1e1e1e; --header: #272727;
+  --text: #e5e5e5; --muted: #aaa; --line: #3a3a3a; --selected: #383838;
+  --green: #365c2c; --accent: #35cf79; --link: #a4b9e5;
+  color-scheme: dark;
+}
 :host([data-font-size="small"]) { --body-size: 14px; }
 :host([data-font-size="large"]) { --body-size: 18px; }
 * { box-sizing: border-box; }
@@ -1381,6 +1387,10 @@ svg { display: block; width: 24px; height: 24px; }
 .font-size-options { display: flex; gap: 6px; padding: 4px 10px 10px; }
 .font-size-options button { flex: 1; padding: 8px 0; text-align: center; border-radius: 4px; background: #f3f3f3; }
 .font-size-options button[aria-pressed="true"] { background: #e2efdf; color: #078535; font-weight: 600; }
+.theme-options { display: flex; gap: 6px; padding: 4px 10px 10px; }
+.theme-options button { flex: 1; display: grid; place-items: center; padding: 10px 0; border-radius: 4px; background: #f3f3f3; }
+.theme-options button[aria-pressed="true"] { background: #e2efdf; color: #078535; }
+.theme-options svg { width: 22px; height: 22px; }
 .settings-divider { height: 1px; margin: 0 8px 4px; background: #eee; }
 .drawer { position: absolute; left: var(--nav-width); top: 0; bottom: 0; width: var(--list-width); background: #f5f5f5; z-index: 14; box-shadow: 4px 0 18px #0001; display: flex; flex-direction: column; border-right: 1px solid #ddd; }
 .drawer-head { height: var(--header-height); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #ddd; }
@@ -1404,6 +1414,63 @@ svg { display: block; width: 24px; height: 24px; }
 .secondary { padding: 10px 16px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; background: #fff; }
 .modal-error { color: #c13c3c; font-size: 14px; white-space: pre-wrap; margin: 12px 0; }
 .preview { background: white; border-radius: 5px; padding: 18px; margin: 15px 0; }
+:host([data-theme="dark"]) .add,
+:host([data-theme="dark"]) .emoji-toggle,
+:host([data-theme="dark"]) .popup button,
+:host([data-theme="dark"]) .popup a,
+:host([data-theme="dark"]) .field input,
+:host([data-theme="dark"]) .field textarea,
+:host([data-theme="dark"]) .field select { color: var(--text); }
+:host([data-theme="dark"]) .search { background: #333; }
+:host([data-theme="dark"]) .topic-row:hover,
+:host([data-theme="dark"]) .pagination button:hover:not(:disabled),
+:host([data-theme="dark"]) .icon-button:hover,
+:host([data-theme="dark"]) .popup button:hover,
+:host([data-theme="dark"]) .popup a:hover,
+:host([data-theme="dark"]) .emoji-option:hover,
+:host([data-theme="dark"]) .drawer-item:hover { background: #363636; }
+:host([data-theme="dark"]) .topic-row.selected { background: var(--selected); }
+:host([data-theme="dark"]) .bubble,
+:host([data-theme="dark"]) .emoji-picker,
+:host([data-theme="dark"]) .popup,
+:host([data-theme="dark"]) .field input,
+:host([data-theme="dark"]) .field textarea,
+:host([data-theme="dark"]) .field select,
+:host([data-theme="dark"]) .secondary,
+:host([data-theme="dark"]) .preview { background: #2c2c2c; }
+:host([data-theme="dark"]) .own .bubble { background: var(--green); }
+:host([data-theme="dark"]) .bubble-body pre,
+:host([data-theme="dark"]) .bubble-body :not(pre) > code,
+:host([data-theme="dark"]) .composer,
+:host([data-theme="dark"]) .drawer,
+:host([data-theme="dark"]) .modal { background: #252525; }
+:host([data-theme="dark"]) .send,
+:host([data-theme="dark"]) .font-size-options button,
+:host([data-theme="dark"]) .theme-options button { background: #383838; }
+:host([data-theme="dark"]) .send { color: var(--accent); }
+:host([data-theme="dark"]) .send:hover:not(:disabled) { background: #454545; }
+:host([data-theme="dark"]) .send:disabled { color: #888; }
+:host([data-theme="dark"]) .font-size-options button[aria-pressed="true"],
+:host([data-theme="dark"]) .theme-options button[aria-pressed="true"],
+:host([data-theme="dark"]) .drawer-item.selected { background: #284635; color: var(--accent); }
+:host([data-theme="dark"]) .settings-label,
+:host([data-theme="dark"]) .field,
+:host([data-theme="dark"]) .bubble-body blockquote { color: var(--muted); }
+:host([data-theme="dark"]) .settings-divider { background: var(--line); }
+:host([data-theme="dark"]) .emoji-picker,
+:host([data-theme="dark"]) .popup,
+:host([data-theme="dark"]) .drawer,
+:host([data-theme="dark"]) .drawer-head,
+:host([data-theme="dark"]) .drawer-search,
+:host([data-theme="dark"]) .modal-head,
+:host([data-theme="dark"]) .modal-foot,
+:host([data-theme="dark"]) .field input,
+:host([data-theme="dark"]) .field textarea,
+:host([data-theme="dark"]) .field select,
+:host([data-theme="dark"]) .secondary,
+:host([data-theme="dark"]) .bubble-body th,
+:host([data-theme="dark"]) .bubble-body td,
+:host([data-theme="dark"]) .bubble-body blockquote { border-color: var(--line); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 `;
 
@@ -3777,6 +3844,9 @@ svg { display: block; width: 24px; height: 24px; }
   var paths = {
     smile: '<circle cx="12" cy="12" r="9"/><path d="M8 14a4 4 0 0 0 8 0Z"/><path d="M8 9h.01M16 9h.01" stroke-width="3"/>',
     menu: '<path d="M5 6h14M5 12h14M5 18h14"/>',
+    monitor: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4M8 21h8"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
+    moon: '<path d="M20.9 13.2A9 9 0 0 1 10.8 3.1a9 9 0 1 0 10.1 10.1Z"/>',
     chat: '<path d="M20 11.5a8 8 0 0 1-8 8 9 9 0 0 1-3-.5L4 21l1.4-4.6A8 8 0 1 1 20 11.5Z"/>',
     bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
     compass: '<circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/>',
@@ -3855,6 +3925,9 @@ svg { display: block; width: 24px; height: 24px; }
       const stored = read(`context:${this.user.user || "guest"}`, "/?tab=all");
       this.listURL = "items" in initial ? initial.url : this.validListURL(stored);
       this.host.id = "v2wc-root";
+      const theme = read("theme", "system");
+      this.theme = theme === "light" || theme === "dark" ? theme : "system";
+      this.applyTheme();
       const fontSize = read("font-size", "medium");
       this.fontSize = fontSize === "small" || fontSize === "large" ? fontSize : "medium";
       this.host.dataset.fontSize = this.fontSize;
@@ -3904,6 +3977,8 @@ svg { display: block; width: 24px; height: 24px; }
     popup;
     settingsButton;
     fontSize = "medium";
+    theme = "system";
+    systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
     drawer;
     modal;
     toastNode;
@@ -3913,6 +3988,7 @@ svg { display: block; width: 24px; height: 24px; }
     refreshListButton = button("刷新话题列表", () => void this.loadList(this.listURL), "mini", "refresh");
     mount() {
       document.body.append(this.host);
+      this.systemTheme.addEventListener("change", this.applyTheme);
       this.updatePanelWidth();
       window.addEventListener("resize", this.updatePanelWidth);
       window.addEventListener("resize", this.resizeReply);
@@ -3938,6 +4014,7 @@ svg { display: block; width: 24px; height: 24px; }
       window.removeEventListener("resize", this.resizeReply);
       window.removeEventListener("popstate", this.onPopState);
       window.removeEventListener("hashchange", this.onHashChange);
+      this.systemTheme.removeEventListener("change", this.applyTheme);
       this.host.remove();
     }
     updatePanelWidth = () => {
@@ -4089,6 +4166,9 @@ svg { display: block; width: 24px; height: 24px; }
       link.innerHTML = icon(symbol);
       return link;
     }
+    applyTheme = () => {
+      this.host.dataset.theme = this.theme === "system" ? this.systemTheme.matches ? "dark" : "light" : this.theme;
+    };
     openSettings() {
       if (this.popup?.classList.contains("settings-popup")) {
         this.closePopup();
@@ -4099,6 +4179,19 @@ svg { display: block; width: 24px; height: 24px; }
       popup.id = "v2wc-settings";
       popup.setAttribute("role", "dialog");
       popup.setAttribute("aria-label", "更多设置");
+      const themes = el("div", "theme-options");
+      themes.setAttribute("role", "group");
+      themes.setAttribute("aria-label", "主题");
+      for (const [value, label, symbol] of [["system", "跟随系统", "monitor"], ["light", "日间模式", "sun"], ["dark", "暗黑模式", "moon"]]) {
+        const control = button(label, () => {
+          this.theme = value;
+          write("theme", value);
+          this.applyTheme();
+          themes.querySelectorAll("button").forEach((option) => option.setAttribute("aria-pressed", String(option === control)));
+        }, "", symbol);
+        control.setAttribute("aria-pressed", String(value === this.theme));
+        themes.append(control);
+      }
       const sizes = el("div", "font-size-options");
       sizes.setAttribute("role", "group");
       sizes.setAttribute("aria-label", "字号");
@@ -4113,7 +4206,7 @@ svg { display: block; width: 24px; height: 24px; }
         control.setAttribute("aria-pressed", String(value === this.fontSize));
         sizes.append(control);
       }
-      popup.append(el("div", "settings-label", "字号"), sizes, el("div", "settings-divider"), button("恢复原站界面", () => this.restore()));
+      popup.append(el("div", "settings-label", "主题"), themes, el("div", "settings-divider"), el("div", "settings-label", "字号"), sizes, el("div", "settings-divider"), button("恢复原站界面", () => this.restore()));
       this.shell.append(popup);
       this.settingsButton?.setAttribute("aria-expanded", "true");
       sizes.querySelector('[aria-pressed="true"]')?.focus();

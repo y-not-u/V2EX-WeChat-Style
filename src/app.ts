@@ -9,6 +9,7 @@ import type { Action, Message, NativeForm, Pagination, Session, Topic, TopicList
 
 interface HistoryContext { v2wc: true; listURL: string; listScroll: number; chatScroll?: number }
 type FontSize = 'small' | 'medium' | 'large';
+type Theme = 'system' | 'light' | 'dark';
 const supportedList = (path: string) => path === '/' || /^\/go\/[^/]+\/?$/.test(path) || path === '/my/topics';
 export const supportedRoute = (path: string) => supportedList(path) || /^\/t\/\d+\/?$/.test(path);
 const homeTabs = ['技术', '创意', '好玩', 'Apple', '酷工作', '交易', '城市', '问与答', '最热', '全部'].map((label, i) => ({
@@ -44,6 +45,8 @@ export class ChatApp {
   private popup?: HTMLElement;
   private settingsButton?: HTMLButtonElement;
   private fontSize: FontSize = 'medium';
+  private theme: Theme = 'system';
+  private systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
   private drawer?: HTMLElement;
   private modal?: HTMLElement;
   private toastNode?: HTMLElement;
@@ -57,6 +60,9 @@ export class ChatApp {
     const stored = read(`context:${this.user.user || 'guest'}`, '/?tab=all');
     this.listURL = 'items' in initial ? initial.url : this.validListURL(stored);
     this.host.id = 'v2wc-root';
+    const theme = read<string>('theme', 'system');
+    this.theme = theme === 'light' || theme === 'dark' ? theme : 'system';
+    this.applyTheme();
     const fontSize = read<string>('font-size', 'medium');
     this.fontSize = fontSize === 'small' || fontSize === 'large' ? fontSize : 'medium';
     this.host.dataset.fontSize = this.fontSize;
@@ -72,6 +78,7 @@ export class ChatApp {
 
   mount(): void {
     document.body.append(this.host);
+    this.systemTheme.addEventListener('change', this.applyTheme);
     this.updatePanelWidth();
     window.addEventListener('resize', this.updatePanelWidth);
     window.addEventListener('resize', this.resizeReply);
@@ -95,6 +102,7 @@ export class ChatApp {
     window.removeEventListener('resize', this.updatePanelWidth);
     window.removeEventListener('resize', this.resizeReply);
     window.removeEventListener('popstate', this.onPopState); window.removeEventListener('hashchange', this.onHashChange);
+    this.systemTheme.removeEventListener('change', this.applyTheme);
     this.host.remove();
   }
 
@@ -214,11 +222,24 @@ export class ChatApp {
     const link = nativeLink('', url, 'rail-button'); link.title = label; link.setAttribute('aria-label', label); link.innerHTML = icon(symbol); return link;
   }
 
+  private applyTheme = (): void => {
+    this.host.dataset.theme = this.theme === 'system' ? (this.systemTheme.matches ? 'dark' : 'light') : this.theme;
+  };
+
   private openSettings(): void {
     if (this.popup?.classList.contains('settings-popup')) { this.closePopup(); return; }
     this.closePopup();
     const popup = this.popup = el('div', 'popup settings-popup');
     popup.id = 'v2wc-settings'; popup.setAttribute('role', 'dialog'); popup.setAttribute('aria-label', '更多设置');
+    const themes = el('div', 'theme-options');
+    themes.setAttribute('role', 'group'); themes.setAttribute('aria-label', '主题');
+    for (const [value, label, symbol] of [['system', '跟随系统', 'monitor'], ['light', '日间模式', 'sun'], ['dark', '暗黑模式', 'moon']] as const) {
+      const control = button(label, () => {
+        this.theme = value; write('theme', value); this.applyTheme();
+        themes.querySelectorAll('button').forEach(option => option.setAttribute('aria-pressed', String(option === control)));
+      }, '', symbol);
+      control.setAttribute('aria-pressed', String(value === this.theme)); themes.append(control);
+    }
     const sizes = el('div', 'font-size-options');
     sizes.setAttribute('role', 'group'); sizes.setAttribute('aria-label', '字号');
     for (const [value, label] of [['small', '小'], ['medium', '中'], ['large', '大']] as const) {
@@ -228,7 +249,7 @@ export class ChatApp {
       });
       control.setAttribute('aria-pressed', String(value === this.fontSize)); sizes.append(control);
     }
-    popup.append(el('div', 'settings-label', '字号'), sizes, el('div', 'settings-divider'), button('恢复原站界面', () => this.restore()));
+    popup.append(el('div', 'settings-label', '主题'), themes, el('div', 'settings-divider'), el('div', 'settings-label', '字号'), sizes, el('div', 'settings-divider'), button('恢复原站界面', () => this.restore()));
     this.shell.append(popup);
     this.settingsButton?.setAttribute('aria-expanded', 'true');
     sizes.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus();

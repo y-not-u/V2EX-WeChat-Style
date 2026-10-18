@@ -72,6 +72,43 @@ async function openTopic(page: Page, id = 1): Promise<void> {
   await expect(root(page).getByRole('textbox', { name: '回复内容' })).toBeEnabled();
 }
 
+test('主题图标切换、保存偏好并实时跟随系统', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await setup(page); await page.goto(origin);
+  await expect(root(page)).toHaveAttribute('data-theme', 'light');
+  await root(page).getByRole('button', { name: '更多设置' }).click();
+  const themes = root(page).getByRole('group', { name: '主题', exact: true });
+  const system = themes.getByRole('button', { name: '跟随系统' });
+  const light = themes.getByRole('button', { name: '日间模式' });
+  const dark = themes.getByRole('button', { name: '暗黑模式' });
+  await expect(system).toHaveAttribute('aria-pressed', 'true');
+  await expect(themes.locator('svg')).toHaveCount(3);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(root(page)).toHaveAttribute('data-theme', 'dark');
+  await expect(root(page).locator('.app')).toHaveCSS('background-color', 'rgb(30, 30, 30)');
+  await light.click();
+  await expect(root(page)).toHaveAttribute('data-theme', 'light');
+  await expect(light).toHaveAttribute('aria-pressed', 'true');
+  await expect(system).toHaveAttribute('aria-pressed', 'false');
+  await page.reload();
+  await expect(root(page)).toHaveAttribute('data-theme', 'light');
+  await root(page).getByRole('button', { name: '更多设置' }).click();
+  await dark.click();
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(root(page)).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(root(page)).toHaveAttribute('data-theme', 'dark');
+  await root(page).getByRole('button', { name: '更多设置' }).click();
+  await system.click();
+  await expect(root(page)).toHaveAttribute('data-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(root(page)).toHaveAttribute('data-theme', 'dark');
+  await root(page).getByRole('button', { name: '更多设置' }).click();
+  await openTopic(page);
+  await expect(root(page).locator('.message.original .bubble').first()).toHaveCSS('background-color', 'rgb(44, 44, 44)');
+  await expect(root(page).locator('.own .bubble').first()).toHaveCSS('background-color', 'rgb(54, 92, 44)');
+});
+
 test('三栏、列表筛选、正文、附言、气泡与历史导航', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await setup(page); await page.goto(origin);

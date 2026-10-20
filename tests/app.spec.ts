@@ -435,6 +435,56 @@ test('分类和节点标记当前选择，分页和打开话题后保留标记',
   await page.screenshot({ path: '/tmp/v2ex-category-selected.png' });
 });
 
+test('节点面板合并进行中的请求，成功后在站内导航间复用缓存', async ({ page }) => {
+  await setup(page);
+  let requests = 0;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/nodes/list.json?*', async route => {
+    requests++;
+    await gate;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ name: 'cached_node', title: '缓存测试节点' }]) });
+  });
+  await page.goto(origin);
+  const toggle = root(page).getByRole('button', { name: '分类和节点', exact: true });
+  const cachedNode = root(page).locator('.drawer').getByRole('button', { name: '缓存测试节点', exact: true });
+  await toggle.click();
+  await expect.poll(() => requests).toBe(1);
+  await toggle.click();
+  await toggle.click();
+  release();
+  await expect(cachedNode).toBeVisible();
+  expect(requests).toBe(1);
+  await toggle.click();
+  await openTopic(page);
+  await toggle.click();
+  await expect(cachedNode).toBeVisible();
+  expect(requests).toBe(1);
+  await page.reload();
+  await toggle.click();
+  await expect(cachedNode).toBeVisible();
+  expect(requests).toBe(2);
+});
+
+test('节点请求失败不缓存，重新打开可重试', async ({ page }) => {
+  await setup(page);
+  let requests = 0;
+  await page.route('**/api/nodes/list.json?*', route => {
+    requests++;
+    return requests === 1
+      ? route.fulfill({ status: 503, body: 'Unavailable' })
+      : route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ name: 'retry_node', title: '重试成功节点' }]) });
+  });
+  await page.goto(origin);
+  const toggle = root(page).getByRole('button', { name: '分类和节点', exact: true });
+  await toggle.click();
+  await expect(root(page).getByRole('link', { name: '在原站浏览全部节点' })).toBeVisible();
+  await toggle.click();
+  await toggle.click();
+  await expect(root(page).getByRole('button', { name: '重试成功节点', exact: true })).toBeVisible();
+  expect(requests).toBe(2);
+});
+
 test('节点列表结构、分类和评论分页', async ({ page }) => {
   await setup(page); await page.goto(origin); await root(page).getByRole('button', { name: '分类和节点', exact: true }).click();
   await root(page).locator('.drawer').getByRole('button', { name: '分享创造', exact: true }).click();

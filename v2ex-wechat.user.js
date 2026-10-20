@@ -3741,6 +3741,22 @@ svg { display: block; width: 24px; height: 24px; }
     if (!doc.querySelector("#Main")) throw new Error("页面暂时无法读取，可能需要在原站完成访问验证。");
     return { doc, url: response.url };
   }
+  var nodesRequest;
+  function loadNodes() {
+    if (!nodesRequest) {
+      nodesRequest = (async () => {
+        const response = await fetch("/api/nodes/list.json?fields=name,title&sort_by=topics&reverse=1", { credentials: "same-origin" });
+        if (!response.ok) throw new Error("节点列表暂时不可用");
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error("节点列表格式无法识别");
+        return data.filter((n) => n !== null && typeof n === "object" && typeof n.name === "string" && /^[a-zA-Z0-9_-]+$/.test(n.name) && typeof n.title === "string");
+      })().catch((error) => {
+        nodesRequest = void 0;
+        throw error;
+      });
+    }
+    return nodesRequest;
+  }
   async function freshOnce() {
     const response = await fetch("/poll_once", { credentials: "same-origin", cache: "no-store" });
     if (!response.ok) throw new Error("无法刷新操作令牌，请在原站重新登录。");
@@ -4740,11 +4756,7 @@ svg { display: block; width: 24px; height: 24px; }
       search.addEventListener("input", render);
       render();
       try {
-        const response = await fetch("/api/nodes/list.json?fields=name,title&sort_by=topics&reverse=1", { credentials: "same-origin" });
-        if (!response.ok) throw new Error("节点列表暂时不可用");
-        const data = await response.json();
-        if (!Array.isArray(data)) throw new Error("节点列表格式无法识别");
-        all = data.filter((n) => typeof n.name === "string" && /^[a-zA-Z0-9_-]+$/.test(n.name) && typeof n.title === "string");
+        all = await loadNodes();
         if (this.drawer === drawer) render();
       } catch {
         if (this.drawer === drawer) nodes.append(nativeLink("在原站浏览全部节点", "/planes", "drawer-item"));
@@ -4896,9 +4908,8 @@ svg { display: block; width: 24px; height: 24px; }
           for (const input of [title, node, content]) input.disabled = false;
         }
       };
-      if (!form.nodes.length && form.nodeKey) void fetch("/api/nodes/list.json?fields=name,title&sort_by=topics&reverse=1").then((r) => r.json()).then((data) => {
-        if (!Array.isArray(data)) return;
-        for (const n of data) if (typeof n.name === "string" && typeof n.title === "string") {
+      if (!form.nodes.length && form.nodeKey) void loadNodes().then((data) => {
+        for (const n of data) {
           const option = el("option");
           option.value = n.name;
           option.label = n.title;

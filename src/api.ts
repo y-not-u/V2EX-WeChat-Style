@@ -18,6 +18,26 @@ export async function loadPage(input: string, signal?: AbortSignal): Promise<Pag
   return { doc, url: response.url };
 }
 
+export interface NodeSummary { name: string; title: string }
+// Share both successful results and in-flight requests for this page's lifetime.
+let nodesRequest: Promise<NodeSummary[]> | undefined;
+export function loadNodes(): Promise<NodeSummary[]> {
+  if (!nodesRequest) {
+    nodesRequest = (async () => {
+      const response = await fetch('/api/nodes/list.json?fields=name,title&sort_by=topics&reverse=1', { credentials: 'same-origin' });
+      if (!response.ok) throw new Error('节点列表暂时不可用');
+      const data: unknown = await response.json();
+      if (!Array.isArray(data)) throw new Error('节点列表格式无法识别');
+      return data.filter((n): n is NodeSummary => n !== null && typeof n === 'object' &&
+        typeof n.name === 'string' && /^[a-zA-Z0-9_-]+$/.test(n.name) && typeof n.title === 'string');
+    })().catch(error => {
+      nodesRequest = undefined;
+      throw error;
+    });
+  }
+  return nodesRequest;
+}
+
 async function freshOnce(): Promise<string> {
   const response = await fetch('/poll_once', { credentials: 'same-origin', cache: 'no-store' });
   if (!response.ok) throw new Error('无法刷新操作令牌，请在原站重新登录。');

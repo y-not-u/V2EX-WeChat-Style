@@ -1,6 +1,6 @@
 import { marked } from 'marked';
 import styles from './style.css';
-import { loadPage, runAction, submitForm } from './api';
+import { loadNodes, loadPage, runAction, submitForm } from './api';
 import { parseForm, parseList, parseTopic, safeHTML, session } from './parser';
 import { draftKey, read, write } from './storage';
 import { avatar, button, el, nativeLink, nativeURL } from './dom';
@@ -622,11 +622,7 @@ export class ChatApp {
       for (const n of all.filter(n => `${n.name} ${n.title}`.toLowerCase().includes(q))) nodes.append(item(n.title, `/go/${n.name}`));
     }; search.addEventListener('input', render); render();
     try {
-      const response = await fetch('/api/nodes/list.json?fields=name,title&sort_by=topics&reverse=1', { credentials: 'same-origin' });
-      if (!response.ok) throw new Error('节点列表暂时不可用');
-      const data: unknown = await response.json();
-      if (!Array.isArray(data)) throw new Error('节点列表格式无法识别');
-      all = data.filter(n => typeof n.name === 'string' && /^[a-zA-Z0-9_-]+$/.test(n.name) && typeof n.title === 'string');
+      all = await loadNodes();
       if (this.drawer === drawer) render();
     } catch { if (this.drawer === drawer) nodes.append(nativeLink('在原站浏览全部节点', '/planes', 'drawer-item')); }
   }
@@ -703,9 +699,8 @@ export class ChatApp {
       } catch (problem) { error.textContent = this.errorText(problem); }
       finally { this.pending.delete('new'); publish.disabled = false; for (const input of [title, node, content]) input.disabled = false; }
     };
-    if (!form.nodes.length && form.nodeKey) void fetch('/api/nodes/list.json?fields=name,title&sort_by=topics&reverse=1').then(r => r.json()).then(data => {
-      if (!Array.isArray(data)) return;
-      for (const n of data) if (typeof n.name === 'string' && typeof n.title === 'string') { const option = el('option'); option.value = n.name; option.label = n.title; datalist.append(option); }
+    if (!form.nodes.length && form.nodeKey) void loadNodes().then(data => {
+      for (const n of data) { const option = el('option'); option.value = n.name; option.label = n.title; datalist.append(option); }
     }).catch(() => { /* A node name can still be entered manually. */ });
   }
 

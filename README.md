@@ -55,10 +55,10 @@
 ## 🛠️ 本地开发
 
 ```bash
-npm ci              # 安装依赖
-npm run dev         # 监听并自动打包
-npm run build       # 构建产物 v2ex-wechat.user.js
-npm run check       # 类型检查 + Playwright 自动化测试
+pnpm install --frozen-lockfile              # 安装依赖
+pnpm run dev         # 监听并自动打包
+pnpm run build       # 构建产物 v2ex-wechat.user.js
+pnpm run check       # 类型检查 + Playwright 自动化测试
 ```
 
 ---
@@ -66,3 +66,7 @@ npm run check       # 类型检查 + Playwright 自动化测试
 ## 📄 许可证
 
 本项目基于 [MIT License](LICENSE) 开源。与 V2EX 官方及微信官方均无隶属关系。
+
+### Node.js 依赖管理
+
+使用 pnpm 11.21.0（`package.json` 已固定版本）。首次可执行 `npm install --global pnpm@11.21.0` 安装工具；项目依赖使用 `pnpm install --frozen-lockfile` 安装，提交 `pnpm-lock.yaml`，不要生成 `package-lock.json`。

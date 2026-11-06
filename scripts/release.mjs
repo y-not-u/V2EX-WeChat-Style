@@ -13,6 +13,15 @@ function run(command, args, capture = false) {
   return capture ? result.stdout.trim() : '';
 }
 
+function runPackageManager(args) {
+  const executable = process.env.npm_execpath;
+  if (!executable) throw new Error('请通过 pnpm run release 执行发布。');
+  if (/\.[cm]?js$/.test(executable)) {
+    return run(process.execPath, [executable, ...args]);
+  }
+  return run(executable, args);
+}
+
 let versionCreated = false;
 try {
   const args = process.argv.slice(2);
@@ -20,29 +29,29 @@ try {
   const bumpArgs = args.filter((arg) => arg !== '--no-test');
   const bump = bumpArgs[0] ?? 'patch';
   if (bumpArgs.length > 1 || !['patch', 'minor', 'major'].includes(bump)) {
-    throw new Error('用法：npm run release [-- patch|minor|major] [--no-test]');
+    throw new Error('用法：pnpm run release [patch|minor|major] [--no-test]');
   }
   if (run('git', ['branch', '--show-current'], true) !== 'main') {
     throw new Error('请切换到 main 分支后发布。');
   }
   if (run('git', ['status', '--porcelain'], true)) {
-    throw new Error('请先提交工作区修改，再运行 npm run release。');
+    throw new Error('请先提交工作区修改，再运行 pnpm run release。');
   }
   run('git', ['remote', 'get-url', 'origin'], true);
   if (!process.env.npm_execpath) {
-    throw new Error('请通过 npm run release 执行发布。');
+    throw new Error('请通过 pnpm run release 执行发布。');
   }
 
   if (noTest) {
-    run(process.execPath, [process.env.npm_execpath, 'run', 'typecheck']);
-    run(process.execPath, [process.env.npm_execpath, 'version', bump, '--no-git-tag-version', '--ignore-scripts']);
+    runPackageManager(['run', 'typecheck']);
+    runPackageManager(['version', bump, '--no-git-tag-version', '--ignore-scripts']);
     const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
-    run(process.execPath, [process.env.npm_execpath, 'run', 'build']);
-    run('git', ['add', 'package.json', 'package-lock.json', 'v2ex-wechat.user.js']);
+    runPackageManager(['run', 'build']);
+    run('git', ['add', 'package.json', 'pnpm-lock.yaml', 'v2ex-wechat.user.js']);
     run('git', ['commit', '-m', version]);
     run('git', ['tag', '-a', `v${version}`, '-m', version]);
   } else {
-    run(process.execPath, [process.env.npm_execpath, 'version', bump]);
+    runPackageManager(['version', bump]);
   }
   versionCreated = true;
   run('git', ['push', 'origin', 'main', '--follow-tags']);
